@@ -18,6 +18,7 @@
 
     <el-main class="main">
       <ComparePanel class="compare" />
+      <PageGoals />
       <div class="page">
         <router-view />
       </div>
@@ -29,6 +30,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ComparePanel from './ComparePanel.vue'
+import PageGoals from './PageGoals.vue'
 
 const route = useRoute()
 const active = computed(() => (typeof route.path === 'string' ? route.path : '/inventory'))
