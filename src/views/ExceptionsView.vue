@@ -38,89 +38,22 @@
       />
 
       <div class="table-wrap">
-        <template v-if="store.libraryMode === 'el-table'">
-          <el-table
-            v-loading="loading"
-            :data="rows"
-            row-key="id"
-            border
-            :height="tableHeight"
-            @sort-change="onSortChange"
-          >
-            <el-table-column
-              v-if="store.toggles.selection"
-              type="selection"
-              width="50"
-              fixed="left"
-            />
-            <el-table-column
-              prop="type"
-              label="异常类型"
-              width="140"
-              fixed="left"
-              align="center"
-              sortable
-            >
-              <template #default="{ row }">
-                <el-tag size="small" :type="typeTag(row.type)">{{ row.type }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="sku"
-              label="SKU"
-              width="140"
-              fixed="left"
-              sortable
-              show-overflow-tooltip
-            />
-            <el-table-column prop="skuName" label="名称" width="220" show-overflow-tooltip />
-            <el-table-column prop="bin" label="库位" width="140" show-overflow-tooltip />
-            <el-table-column prop="riskLevel" label="风险" width="110" align="center" sortable>
-              <template #default="{ row }">
-                <span class="risk" :data-level="row.riskLevel">L{{ row.riskLevel }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="140" align="center" sortable>
-              <template #default="{ row }">
-                <el-tag
-                  size="small"
-                  :type="
-                    row.status === 'DONE'
-                      ? 'success'
-                      : row.status === 'PROCESSING'
-                        ? 'warning'
-                        : 'info'
-                  "
-                >
-                  {{ row.status }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="assignee" label="处理人" width="140" />
-            <el-table-column prop="createdAt" label="创建时间" width="170" sortable>
-              <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-            </el-table-column>
-            <el-table-column prop="message" label="描述" width="320" show-overflow-tooltip />
-            <el-table-column label="操作" width="280" fixed="right" align="center">
-              <template #default="{ row }">
-                <el-button size="small" @click="act('process', row)">标记处理中</el-button>
-                <el-button size="small" @click="act('assign', row)">转派</el-button>
-                <el-button size="small" @click="act('create-adjustment', row)"
-                  >生成调整单</el-button
-                >
-                <el-button size="small" type="primary" @click="openDetail(row)">查看详情</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </template>
-
-        <template v-else>
-          <el-auto-resizer>
-            <template #default="{ height, width }">
-              <el-table-v2 :columns="v2Cols" :data="rows" :height="height" :width="width" fixed />
-            </template>
-          </el-auto-resizer>
-        </template>
+        <component
+          :is="adapter.DataTable"
+          :rows="rows"
+          row-key="id"
+          :height="tableHeight"
+          :loading="loading"
+          border
+          :columns="columns"
+          :header-groups="undefined"
+          :selection="store.toggles.selection && adapter.capabilities.selection"
+          :selected-row-keys="selectedRowKeys"
+          :on-update-selected-row-keys="onUpdateSelectedKeys"
+          :sort="tableSort"
+          :on-update-sort="onUpdateSort"
+          empty-text="暂无数据"
+        />
       </div>
 
       <div class="footer">
@@ -138,38 +71,43 @@
     </el-card>
 
     <el-drawer v-model="drawerOpen" title="异常详情" size="420px">
-      <template #default>
-        <el-descriptions v-if="current" :column="1" size="small" border>
-          <el-descriptions-item label="type">{{ current.type }}</el-descriptions-item>
-          <el-descriptions-item label="sku">{{ current.sku }}</el-descriptions-item>
-          <el-descriptions-item label="skuName">{{ current.skuName }}</el-descriptions-item>
-          <el-descriptions-item label="bin">{{ current.bin }}</el-descriptions-item>
-          <el-descriptions-item label="status">{{ current.status }}</el-descriptions-item>
-          <el-descriptions-item label="message">{{ current.message }}</el-descriptions-item>
-        </el-descriptions>
+      <el-descriptions v-if="current" :column="1" size="small" border>
+        <el-descriptions-item label="type">{{ current.type }}</el-descriptions-item>
+        <el-descriptions-item label="sku">{{ current.sku }}</el-descriptions-item>
+        <el-descriptions-item label="skuName">{{ current.skuName }}</el-descriptions-item>
+        <el-descriptions-item label="bin">{{ current.bin }}</el-descriptions-item>
+        <el-descriptions-item label="status">{{ current.status }}</el-descriptions-item>
+        <el-descriptions-item label="message">{{ current.message }}</el-descriptions-item>
+      </el-descriptions>
 
-        <el-divider />
-        <div class="tl-title">操作日志</div>
-        <el-timeline v-loading="timelineLoading">
-          <el-timeline-item v-for="(t, i) in timeline" :key="i" :timestamp="formatDateTime(t.at)">
-            {{ t.text }}
-          </el-timeline-item>
-        </el-timeline>
-      </template>
+      <el-divider />
+      <div class="tl-title">操作日志</div>
+      <el-timeline v-loading="timelineLoading">
+        <el-timeline-item v-for="(t, i) in timeline" :key="i" :timestamp="formatDateTime(t.at)">
+          {{ t.text }}
+        </el-timeline-item>
+      </el-timeline>
     </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue'
-import { ElAutoResizer, ElMessage, ElTag } from 'element-plus'
-import { TableV2FixedDir } from 'element-plus'
+import { computed, h, reactive, ref, type FunctionalComponent } from 'vue'
+import { ElMessage } from 'element-plus'
 import { exceptionAction, fetchExceptionTimeline, fetchExceptions } from '../mock/api'
 import { useBenchmarkStore } from '../stores/benchmark'
 import type { ExceptionRow, FilterRule, Query } from '../types/benchmark'
 import { formatDateTime } from '../utils/format'
+import { useTableAdapter } from '../adapters/table/useTableAdapter'
+import type {
+  TableCellCtx,
+  TableColumnDef,
+  TableFixed,
+  TableSortRule,
+} from '../adapters/table/types'
 
 const store = useBenchmarkStore()
+const adapter = useTableAdapter()
 
 const query = reactive<Query>({ page: 1, pageSize: 50, sort: [], filters: [] })
 const form = reactive({
@@ -181,6 +119,7 @@ const form = reactive({
 const loading = ref(false)
 const rows = ref<ExceptionRow[]>([])
 const total = ref(0)
+const selectedRowKeys = ref<string[]>([])
 
 const drawerOpen = ref(false)
 const current = ref<ExceptionRow | null>(null)
@@ -191,7 +130,7 @@ const tableHeight = computed(() => 'calc(100vh - 300px)')
 
 const modeHint = computed(() => {
   if (store.libraryMode === 'el-table-v2')
-    return 'Table V2：此页重点对比“固定列 + 高频操作 + Drawer”。Table V2 列固定能力有限，作为体验对比即可。'
+    return 'Table V2：此页重点对比“固定列 + 高频操作 + Drawer”。'
   return null
 })
 
@@ -238,19 +177,98 @@ function reset() {
   runQuery()
 }
 
-function onSortChange(e: { prop: string; order: 'ascending' | 'descending' | null }) {
-  if (!e.order) query.sort = []
-  else query.sort = [{ field: e.prop, order: e.order === 'ascending' ? 'asc' : 'desc' }]
+const tableSort = computed<TableSortRule[]>(() =>
+  query.sort.map((s) => ({ key: s.field, order: s.order })),
+)
+function onUpdateSort(sort: TableSortRule[]) {
+  query.sort = sort.map((s) => ({ field: s.key, order: s.order }))
   query.page = 1
   runQuery()
 }
 
-function typeTag(t: ExceptionRow['type']) {
+function onUpdateSelectedKeys(keys: string[]) {
+  selectedRowKeys.value = keys
+}
+
+function typeColor(t: ExceptionRow['type']): 'danger' | 'warning' | 'info' | 'default' {
   if (t === 'SHORT') return 'danger'
   if (t === 'EXPIRE_RISK') return 'warning'
   if (t === 'FROZEN') return 'info'
-  return undefined
+  return 'default'
 }
+
+function fixedIf(enabled: boolean, dir: TableFixed): TableFixed | undefined {
+  return enabled ? dir : undefined
+}
+
+const columns = computed<TableColumnDef<ExceptionRow>[]>(() => {
+  const link = (text: string, onClick: () => void) => h('a', { class: 'link', onClick }, text)
+  const fixedLeft = store.toggles.fixedCols ? 'left' : undefined
+  const fixedRight = store.toggles.fixedCols ? 'right' : undefined
+
+  const typeCell: FunctionalComponent<TableCellCtx<ExceptionRow>> = ({ row }) =>
+    h('span', { class: `tag tag-${typeColor(row.type)}` }, row.type)
+
+  const statusCell: FunctionalComponent<TableCellCtx<ExceptionRow>> = ({ row }) =>
+    h(
+      'span',
+      {
+        class: `tag tag-${row.status === 'DONE' ? 'success' : row.status === 'PROCESSING' ? 'warning' : 'info'}`,
+      },
+      row.status,
+    )
+
+  const riskCell: FunctionalComponent<TableCellCtx<ExceptionRow>> = ({ row }) =>
+    h('span', { class: 'risk', 'data-level': row.riskLevel }, `L${row.riskLevel}`)
+
+  const opsCell: FunctionalComponent<TableCellCtx<ExceptionRow>> = ({ row }) =>
+    h('div', { class: 'ops' }, [
+      link('处理中', () => act('process', row)),
+      link('转派', () => act('assign', row)),
+      link('调整单', () => act('create-adjustment', row)),
+      link('详情', () => openDetail(row)),
+    ])
+
+  return [
+    {
+      key: 'type',
+      title: '异常类型',
+      width: 140,
+      align: 'center',
+      fixed: fixedLeft,
+      sortable: true,
+      cell: typeCell,
+    },
+    {
+      key: 'sku',
+      title: 'SKU',
+      width: 140,
+      fixed: fixedIf(store.toggles.fixedCols, 'left'),
+      sortable: true,
+    },
+    { key: 'skuName', title: '名称', width: 220 },
+    { key: 'bin', title: '库位', width: 140, sortable: true },
+    {
+      key: 'riskLevel',
+      title: '风险',
+      width: 110,
+      align: 'center',
+      sortable: true,
+      cell: riskCell,
+    },
+    { key: 'status', title: '状态', width: 140, align: 'center', sortable: true, cell: statusCell },
+    { key: 'assignee', title: '处理人', width: 140 },
+    {
+      key: 'createdAt',
+      title: '创建时间',
+      width: 170,
+      sortable: true,
+      valueGetter: (r) => formatDateTime(r.createdAt),
+    },
+    { key: 'message', title: '描述', width: 320 },
+    { key: 'op', title: '操作', width: 260, fixed: fixedRight, cell: opsCell },
+  ]
+})
 
 async function act(action: 'process' | 'assign' | 'create-adjustment', row: ExceptionRow) {
   const res = await exceptionAction({ seed: store.seed, action, id: row.id })
@@ -268,69 +286,6 @@ async function openDetail(row: ExceptionRow) {
     timelineLoading.value = false
   }
 }
-
-const v2Cols = computed(() => [
-  {
-    key: 'type',
-    dataKey: 'type',
-    title: '异常类型',
-    width: 140,
-    fixed: store.toggles.fixedCols ? TableV2FixedDir.LEFT : undefined,
-    align: 'center',
-    cellRenderer: ({ rowData }: { rowData: ExceptionRow }) =>
-      h(ElTag, { type: typeTag(rowData.type), size: 'small' }, () => rowData.type),
-  },
-  {
-    key: 'sku',
-    dataKey: 'sku',
-    title: 'SKU',
-    width: 140,
-    fixed: store.toggles.fixedCols ? TableV2FixedDir.LEFT : undefined,
-  },
-  { key: 'skuName', dataKey: 'skuName', title: '名称', width: 220 },
-  { key: 'bin', dataKey: 'bin', title: '库位', width: 140 },
-  {
-    key: 'riskLevel',
-    dataKey: 'riskLevel',
-    title: '风险',
-    width: 110,
-    align: 'center',
-    cellRenderer: ({ rowData }: { rowData: ExceptionRow }) => `L${rowData.riskLevel}`,
-  },
-  {
-    key: 'status',
-    dataKey: 'status',
-    title: '状态',
-    width: 140,
-    align: 'center',
-    cellRenderer: ({ rowData }: { rowData: ExceptionRow }) => rowData.status,
-  },
-  { key: 'assignee', dataKey: 'assignee', title: '处理人', width: 140 },
-  {
-    key: 'createdAt',
-    dataKey: 'createdAt',
-    title: '创建时间',
-    width: 170,
-    cellRenderer: ({ rowData }: { rowData: ExceptionRow }) => formatDateTime(rowData.createdAt),
-  },
-  { key: 'message', dataKey: 'message', title: '描述', width: 320 },
-  {
-    key: 'op',
-    dataKey: 'op',
-    title: '操作',
-    width: 260,
-    fixed: store.toggles.fixedCols ? TableV2FixedDir.RIGHT : undefined,
-    cellRenderer: ({ rowData }: { rowData: ExceptionRow }) =>
-      h('div', { style: { display: 'flex', gap: '8px' } }, [
-        h('a', { style: linkStyle, onClick: () => act('process', rowData) }, '处理中'),
-        h('a', { style: linkStyle, onClick: () => act('assign', rowData) }, '转派'),
-        h('a', { style: linkStyle, onClick: () => act('create-adjustment', rowData) }, '调整单'),
-        h('a', { style: linkStyle, onClick: () => openDetail(rowData) }, '详情'),
-      ]),
-  },
-])
-
-const linkStyle = { color: 'var(--el-color-primary)', cursor: 'pointer', textDecoration: 'none' }
 
 runQuery()
 </script>
@@ -360,6 +315,51 @@ runQuery()
 
 .hint {
   margin-bottom: 10px;
+}
+
+.link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ops {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--el-border-color);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.tag-danger {
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-color: var(--el-color-danger-light-5);
+}
+
+.tag-warning {
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
+  border-color: var(--el-color-warning-light-5);
+}
+
+.tag-info {
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+}
+
+.tag-success {
+  color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+  border-color: var(--el-color-success-light-5);
 }
 
 .risk[data-level='5'] {

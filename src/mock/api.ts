@@ -128,19 +128,23 @@ export async function fetchExceptions(params: {
   return { ...paged, requestMs: t1 - t0, computeMs: t2 - t1 }
 }
 
-export async function fetchTreeRoots(params: { seed: number }): Promise<TreeNode[]> {
-  await sleep(80)
+export async function fetchTreeRoots(params: {
+  seed: number
+  mode: 'local' | 'server'
+}): Promise<TreeNode[]> {
+  if (params.mode === 'server') await sleep(80)
   return getTreeRoots(params.seed)
 }
 
 export async function fetchTreeChildren(params: {
   seed: number
   parentId: string
+  mode: 'local' | 'server'
 }): Promise<TreeNode[]> {
   const rng = createRng(params.seed ^ hashString(params.parentId))
-  await sleep(120 + rng() * 380)
+  if (params.mode === 'server') await sleep(120 + rng() * 380)
 
-  if (chance(rng, 0.02)) {
+  if (params.mode === 'server' && chance(rng, 0.02)) {
     throw new Error('Mock: loadChildren failed')
   }
 

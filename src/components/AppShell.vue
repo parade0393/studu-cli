@@ -9,9 +9,9 @@
         <el-menu-item index="/exceptions">/exceptions</el-menu-item>
       </el-menu>
       <div class="spacer" />
-      <el-link href="doc/table-benchmark/PRD.md" :underline="false" target="_blank">PRD</el-link>
+      <el-link href="doc/table-benchmark/PRD.md" underline="never" target="_blank">PRD</el-link>
       <span class="sep">·</span>
-      <el-link href="doc/table-benchmark/UI-SKETCH.md" :underline="false" target="_blank"
+      <el-link href="doc/table-benchmark/UI-SKETCH.md" underline="never" target="_blank"
         >UI</el-link
       >
     </el-header>

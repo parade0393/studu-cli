@@ -1,5 +1,11 @@
 export default {
   extends: ['stylelint-config-standard', 'stylelint-config-recommended-vue'],
+  overrides: [
+    {
+      files: ['**/*.vue', '**/*.html'],
+      customSyntax: 'postcss-html',
+    },
+  ],
   rules: {
     // 允许 Vue 的 deep 选择器
     'selector-pseudo-class-no-unknown': [
