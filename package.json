@@ -13,6 +13,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
+    "lint:style": "stylelint \"**/*.{css,scss,sass,less,vue,html}\" --fix",
     "format": "prettier --write --experimental-cli src/",
     "prepare": "husky",
     "commit": "git-cz",

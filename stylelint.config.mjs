@@ -15,8 +15,6 @@ export default {
         ignoreFunctions: ['v-bind'],
       },
     ],
-    // 颜色格式使用小写
-    'color-hex-case': 'lower',
     // 颜色使用完整格式
     'color-hex-length': 'long',
     // 禁止空块
