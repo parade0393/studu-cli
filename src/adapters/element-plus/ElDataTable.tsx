@@ -1,6 +1,5 @@
 import { ElEmpty, ElTable, ElTableColumn } from 'element-plus'
-import type { VNodeChild } from 'vue'
-import { defineComponent, h } from 'vue'
+import { defineComponent, type VNodeChild } from 'vue'
 import type {
   DataTableProps,
   TableColumnDef,
@@ -32,43 +31,45 @@ function valueOf<Row>(row: Row, col: TableColumnDef<Row>): unknown {
 
 function renderCell<Row>(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNodeChild {
   try {
-    if (col.cell) return h(col.cell, { row, rowIndex })
+    const Cell = col.cell
+    if (Cell) return <Cell row={row} rowIndex={rowIndex} />
     return defaultCellText(valueOf(row, col))
   } catch (e) {
     console.error('[ElDataTable] cell render error', { columnKey: col.key, rowIndex, error: e })
-    return h('span', { style: { color: 'var(--el-color-danger)' } }, 'RenderError')
+    return <span style={{ color: 'var(--el-color-danger)' }}>RenderError</span>
   }
 }
 
 function renderColumns<Row>(columns: TableColumnDef<Row>[]) {
-  return columns.map((col) =>
-    h(
-      ElTableColumn,
-      {
-        key: col.key,
-        prop: col.key,
-        label: col.title,
-        width: col.width,
-        fixed: col.fixed,
-        align: col.align,
-        sortable: col.sortable ? 'custom' : false,
-        'show-overflow-tooltip': true,
-      },
-      {
-        default: ({ row, $index }: { row: Row; $index: number }) => renderCell(row, $index, col),
-        header: (() => {
-          const Header = col.headerCell
-          return Header ? () => h(Header) : undefined
-        })(),
-      },
-    ),
-  )
+  return columns.map((col) => {
+    const Header = col.headerCell
+    return (
+      <ElTableColumn
+        key={col.key}
+        prop={col.key}
+        label={col.title}
+        width={col.width}
+        fixed={col.fixed}
+        align={col.align}
+        sortable={col.sortable ? 'custom' : false}
+        showOverflowTooltip
+        v-slots={{
+          default: ({ row, $index }: { row: Row; $index: number }) => renderCell(row, $index, col),
+          header: Header ? () => <Header /> : undefined,
+        }}
+      />
+    )
+  })
 }
 
 function renderGroupedColumns<Row>(groups: TableHeaderGroup<Row>[]) {
-  return groups.map((g) =>
-    h(ElTableColumn, { key: g.title, label: g.title }, { default: () => renderColumns(g.columns) }),
-  )
+  return groups.map((g) => (
+    <ElTableColumn
+      key={g.title}
+      label={g.title}
+      v-slots={{ default: () => renderColumns(g.columns) }}
+    />
+  ))
 }
 
 export const ElDataTable = defineComponent<DataTableProps<unknown>>({
@@ -94,59 +95,59 @@ export const ElDataTable = defineComponent<DataTableProps<unknown>>({
       const rowKeyFn = (row: unknown) => getRowKey(props.rowKey, row)
       const columns = props.columns as TableColumnDef<unknown>[]
 
-      const selectionCol =
-        props.selection && props.onUpdateSelectedRowKeys
-          ? [
-              h(ElTableColumn, {
-                type: 'selection',
-                width: 50,
-                fixed: 'left',
-                selectable: () => true,
-                'reserve-selection': true,
-              }),
-            ]
-          : []
-
       const spanMethod =
         props.spanMethod &&
         ((p: { row: unknown; rowIndex: number; column: { property?: string } }) => {
           const key = p.column.property
           if (!key) return { rowspan: 1, colspan: 1 }
-          return props.spanMethod!({ row: p.row, rowIndex: p.rowIndex, columnKey: key })
+          return props.spanMethod?.({ row: p.row, rowIndex: p.rowIndex, columnKey: key })
         })
 
-      return h(
-        ElTable,
-        {
-          data: props.rows,
-          'row-key': rowKeyFn,
-          height: props.height,
-          border: props.border,
-          'default-sort': toElementSort(props.sort),
-          'span-method': spanMethod || undefined,
-          'empty-text': props.emptyText,
-          onSortChange: props.onUpdateSort
-            ? (e: { prop: string; order: 'ascending' | 'descending' | null }) =>
-                props.onUpdateSort?.(fromElementSort(e))
-            : undefined,
-          onSelectionChange:
+      const grouped = Array.isArray(props.headerGroups) && props.headerGroups.length > 0
+
+      return (
+        <ElTable
+          data={props.rows}
+          rowKey={rowKeyFn}
+          height={props.height}
+          border={props.border}
+          defaultSort={toElementSort(props.sort)}
+          spanMethod={spanMethod || undefined}
+          emptyText={props.emptyText}
+          onSort-change={
+            props.onUpdateSort
+              ? (e: { prop: string; order: 'ascending' | 'descending' | null }) =>
+                  props.onUpdateSort?.(fromElementSort(e))
+              : undefined
+          }
+          onSelection-change={
             props.selection && props.onUpdateSelectedRowKeys
               ? (selectedRows: unknown[]) => {
                   const keys = selectedRows.map((r) => rowKeyFn(r))
                   props.onUpdateSelectedRowKeys?.(keys)
                 }
-              : undefined,
-        },
-        {
-          default: () => {
-            const grouped = Array.isArray(props.headerGroups) && props.headerGroups.length > 0
-            const nodes = grouped
-              ? renderGroupedColumns(props.headerGroups as TableHeaderGroup<unknown>[])
-              : renderColumns(columns)
-            return [...selectionCol, ...nodes]
-          },
-          empty: () => h(ElEmpty, { description: props.emptyText ?? '暂无数据' }),
-        },
+              : undefined
+          }
+          v-slots={{
+            default: () => (
+              <>
+                {props.selection && props.onUpdateSelectedRowKeys ? (
+                  <ElTableColumn
+                    type="selection"
+                    width={50}
+                    fixed="left"
+                    selectable={() => true}
+                    reserveSelection
+                  />
+                ) : null}
+                {grouped
+                  ? renderGroupedColumns(props.headerGroups as TableHeaderGroup<unknown>[])
+                  : renderColumns(columns)}
+              </>
+            ),
+            empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
+          }}
+        />
       )
     }
   },

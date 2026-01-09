@@ -1,7 +1,13 @@
-import { ElAutoResizer, ElCheckbox, ElTableV2 } from 'element-plus'
-import { TableV2FixedDir, TableV2SortOrder } from 'element-plus'
-import type { SortBy } from 'element-plus'
-import { defineComponent, h, isVNode, type Component, type VNode } from 'vue'
+import {
+  ElAutoResizer,
+  ElCheckbox,
+  ElTableV2,
+  TableV2FixedDir,
+  TableV2SortOrder,
+} from 'element-plus'
+import type { SortBy, TableV2CustomizedHeaderSlotParam } from 'element-plus'
+import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
+import { defineComponent, isVNode, type VNode, type VNodeChild } from 'vue'
 import type {
   DataTableProps,
   TableColumnDef,
@@ -9,8 +15,6 @@ import type {
   TableSortRule,
 } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/types'
-import type { TableV2CustomizedHeaderSlotParam } from 'element-plus'
-import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
 
 type Row = unknown
 
@@ -32,15 +36,17 @@ function fromV2Sort(sortBy: SortBy): TableSortRule[] {
   ]
 }
 
-function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>) {
-  if (col.cell) return h(col.cell, { row, rowIndex })
+function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNodeChild {
+  const Cell = col.cell
+  if (Cell) return <Cell row={row} rowIndex={rowIndex} />
   return defaultCellText(valueOf(row, col))
 }
 
-function wrapVNode(child: unknown): VNode {
+function wrapVNode(child: VNodeChild): VNode {
   if (isVNode(child)) return child
-  if (child == null || child === false) return h('span', null, '')
-  return h('span', null, String(child))
+  if (child == null || child === false) return <span />
+  if (Array.isArray(child)) return <span>{child}</span>
+  return <span>{String(child)}</span>
 }
 
 function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
@@ -52,28 +58,26 @@ function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
   return ({ cells, columns, headerIndex }: TableV2CustomizedHeaderSlotParam) => {
     if (headerIndex === 1) return cells
 
-    const groupCells: unknown[] = []
+    const groupCells: VNodeChild[] = []
     let width = 0
     let currentLabel = ''
 
     const flush = (label: string) => {
       groupCells.push(
-        h(
-          'div',
-          {
-            role: 'columnheader',
-            style: {
-              width: `${width}px`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 600,
-              borderRight: '1px solid var(--el-border-color)',
-              background: 'var(--el-fill-color-light)',
-            },
-          },
-          label,
-        ),
+        <div
+          role="columnheader"
+          style={{
+            width: `${width}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 600,
+            borderRight: '1px solid var(--el-border-color)',
+            background: 'var(--el-fill-color-light)',
+          }}
+        >
+          {label}
+        </div>,
       )
       width = 0
     }
@@ -120,7 +124,6 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
   },
   setup(props) {
     return () => {
-      const TableV2Comp: Component = ElTableV2
       const data = props.rows as Row[]
       const rowKey = (r: Row) => getRowKey(props.rowKey, r)
       const selected = new Set(props.selectedRowKeys ?? [])
@@ -136,28 +139,30 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
           fixed: TableV2FixedDir.LEFT,
           headerCellRenderer: () => {
             const all = data.length > 0 && data.every((r) => selected.has(rowKey(r)))
-            return h(ElCheckbox, {
-              modelValue: all,
-              'onUpdate:modelValue': (v: unknown) => {
-                const checked = v === true
-                const keys = checked ? data.map((r) => rowKey(r)) : []
-                props.onUpdateSelectedRowKeys?.(keys)
-              },
-            })
+            return (
+              <ElCheckbox
+                modelValue={all}
+                onUpdate:modelValue={(v: unknown) => {
+                  const checked = v === true
+                  const keys = checked ? data.map((r) => rowKey(r)) : []
+                  props.onUpdateSelectedRowKeys?.(keys)
+                }}
+              />
+            )
           },
           cellRenderer: ({ rowData }) =>
             wrapVNode(
-              h(ElCheckbox, {
-                modelValue: selected.has(rowKey(rowData)),
-                'onUpdate:modelValue': (v: unknown) => {
+              <ElCheckbox
+                modelValue={selected.has(rowKey(rowData))}
+                onUpdate:modelValue={(v: unknown) => {
                   const checked = v === true
                   const next = new Set(selected)
                   const k = rowKey(rowData)
                   if (checked) next.add(k)
                   else next.delete(k)
                   props.onUpdateSelectedRowKeys?.([...next])
-                },
-              }),
+                }}
+              />,
             ),
         })
       }
@@ -187,39 +192,39 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
         headerGroups && headerGroups.length ? buildHeaderRenderer(headerGroups) : undefined
       const headerHeight = headerRenderer ? [40, 40] : 40
 
-      const tableProps: Record<string, unknown> = {
-        columns,
-        data,
-        fixed: true,
-        headerHeight,
-        onColumnSort: props.onUpdateSort
-          ? (sb: SortBy) => props.onUpdateSort?.(fromV2Sort(sb))
-          : undefined,
-      }
-      if (v2Sort) tableProps.sortBy = v2Sort
+      const sortByProps: Partial<{ sortBy: SortBy }> = v2Sort ? { sortBy: v2Sort } : {}
 
-      return h(
-        'div',
-        {
-          style: {
+      return (
+        <div
+          style={{
             height: typeof props.height === 'number' ? `${props.height}px` : props.height,
             width: '100%',
-          },
-        },
-        h(ElAutoResizer, null, {
-          default: ({ height, width }: { height: number; width: number }) =>
-            h(
-              TableV2Comp,
-              {
-                ...tableProps,
-                width,
-                height,
-              },
-              headerRenderer
-                ? { header: (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p) }
-                : {},
-            ),
-        }),
+          }}
+        >
+          <ElAutoResizer>
+            {({ height, width }: { height: number; width: number }) => (
+              <ElTableV2
+                {...sortByProps}
+                columns={columns}
+                data={data}
+                width={width}
+                height={height}
+                fixed
+                headerHeight={headerHeight}
+                onColumnSort={
+                  props.onUpdateSort
+                    ? (sb: SortBy) => props.onUpdateSort?.(fromV2Sort(sb))
+                    : undefined
+                }
+                v-slots={
+                  headerRenderer
+                    ? { header: (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p) }
+                    : undefined
+                }
+              />
+            )}
+          </ElAutoResizer>
+        </div>
       )
     }
   },

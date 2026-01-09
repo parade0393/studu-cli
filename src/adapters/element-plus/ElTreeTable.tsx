@@ -1,6 +1,5 @@
 import { ElEmpty, ElTable, ElTableColumn } from 'element-plus'
-import type { VNodeChild } from 'vue'
-import { defineComponent, h } from 'vue'
+import { defineComponent, type VNodeChild } from 'vue'
 import type { TableColumnDef, TreeTableProps } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/types'
 
@@ -12,28 +11,26 @@ function valueOf(row: Row, col: TableColumnDef<Row>): unknown {
 }
 
 function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNodeChild {
-  if (col.cell) return h(col.cell, { row, rowIndex })
+  const Cell = col.cell
+  if (Cell) return <Cell row={row} rowIndex={rowIndex} />
   return defaultCellText(valueOf(row, col))
 }
 
 function renderColumns(columns: TableColumnDef<Row>[]) {
-  return columns.map((col) =>
-    h(
-      ElTableColumn,
-      {
-        key: col.key,
-        prop: col.key,
-        label: col.title,
-        width: col.width,
-        fixed: col.fixed,
-        align: col.align,
-        'show-overflow-tooltip': true,
-      },
-      {
+  return columns.map((col) => (
+    <ElTableColumn
+      key={col.key}
+      prop={col.key}
+      label={col.title}
+      width={col.width}
+      fixed={col.fixed}
+      align={col.align}
+      showOverflowTooltip
+      v-slots={{
         default: ({ row, $index }: { row: Row; $index: number }) => renderCell(row, $index, col),
-      },
-    ),
-  )
+      }}
+    />
+  ))
 }
 
 export const ElTreeTable = defineComponent<TreeTableProps<Row>>({
@@ -61,33 +58,33 @@ export const ElTreeTable = defineComponent<TreeTableProps<Row>>({
         : (props.roots as Row[])
       const columns = props.columns as TableColumnDef<Row>[]
 
-      return h(
-        ElTable,
-        {
-          data: roots,
-          'row-key': rowKeyFn,
-          height: props.height,
-          border: props.border,
-          lazy: true,
-          'tree-props': { hasChildren: 'hasChildren', children: 'children' },
-          load: async (row: Row, _treeNode: unknown, resolve: (rows: Row[]) => void) => {
+      return (
+        <ElTable
+          data={roots}
+          rowKey={rowKeyFn}
+          height={props.height}
+          border={props.border}
+          lazy
+          treeProps={{ hasChildren: 'hasChildren', children: 'children' }}
+          load={async (row: Row, _treeNode: unknown, resolve: (rows: Row[]) => void) => {
             const children = await props.loadChildren(row)
             const filtered = props.filterRow
               ? children.filter((c) => props.filterRow?.(c))
               : children
             resolve(filtered)
-          },
-          onRowClick: props.onRowClick ? (row: Row) => props.onRowClick?.(row) : undefined,
-          onSelectionChange:
+          }}
+          onRow-click={props.onRowClick ? (row: Row) => props.onRowClick?.(row) : undefined}
+          onSelection-change={
             props.selection && props.onUpdateSelectedRowKeys
               ? (selectedRows: Row[]) =>
                   props.onUpdateSelectedRowKeys?.(selectedRows.map((r) => rowKeyFn(r)))
-              : undefined,
-        },
-        {
-          default: () => renderColumns(columns),
-          empty: () => h(ElEmpty, { description: props.emptyText ?? '暂无数据' }),
-        },
+              : undefined
+          }
+          v-slots={{
+            default: () => renderColumns(columns),
+            empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
+          }}
+        />
       )
     }
   },

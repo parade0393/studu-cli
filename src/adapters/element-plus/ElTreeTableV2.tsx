@@ -1,9 +1,8 @@
-import { ElAutoResizer, ElTableV2 } from 'element-plus'
-import { TableV2FixedDir } from 'element-plus'
-import { defineComponent, h, isVNode, ref, watch, type Component, type VNode } from 'vue'
-import type { TableColumnDef, TreeTableProps, TreeTableHandle } from '../table/types'
-import { defaultCellText, getRowKey } from '../table/types'
+import { ElAutoResizer, ElTableV2, TableV2FixedDir } from 'element-plus'
+import { defineComponent, isVNode, ref, watch, type VNode, type VNodeChild } from 'vue'
 import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
+import type { TableColumnDef, TreeTableHandle, TreeTableProps } from '../table/types'
+import { defaultCellText, getRowKey } from '../table/types'
 
 type Row = unknown
 
@@ -19,15 +18,17 @@ function valueOf(row: Row, col: TableColumnDef<Row>): unknown {
   return (row as Record<string, unknown>)[col.key]
 }
 
-function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>) {
-  const v = col.cell ? h(col.cell, { row, rowIndex }) : defaultCellText(valueOf(row, col))
-  return v === false || v == null ? '' : v
+function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNodeChild {
+  const Cell = col.cell
+  if (Cell) return <Cell row={row} rowIndex={rowIndex} />
+  return defaultCellText(valueOf(row, col))
 }
 
-function wrapVNode(child: unknown): VNode {
+function wrapVNode(child: VNodeChild): VNode {
   if (isVNode(child)) return child
-  if (child == null || child === false) return h('span', null, '')
-  return h('span', null, String(child))
+  if (child == null || child === false) return <span />
+  if (Array.isArray(child)) return <span>{child}</span>
+  return <span>{String(child)}</span>
 }
 
 export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
@@ -48,7 +49,6 @@ export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
     emptyText: { type: String, required: false },
   },
   setup(props, { expose }) {
-    const TableV2Comp: Component = ElTableV2
     const expanded = ref(new Set<string>())
     const flat = ref<FlatRow[]>([])
     const childrenCache = ref(new Map<string, Row[]>())
@@ -176,32 +176,28 @@ export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
               const key = rowKey(fr.__raw)
               const icon = fr.__hasChildren ? (expanded.value.has(key) ? '▼' : '▶') : ''
               const status = fr.__loading ? '（加载中）' : ''
-              return h(
-                'div',
-                {
-                  style: {
+              return (
+                <div
+                  style={{
                     paddingLeft: `${indent}px`,
                     display: 'flex',
                     gap: '6px',
                     alignItems: 'center',
-                  },
-                },
-                [
-                  h(
-                    'span',
-                    {
-                      style: { cursor: fr.__hasChildren ? 'pointer' : 'default' },
-                      onClick: () => toggle(fr),
-                    },
-                    icon,
-                  ),
-                  h(
-                    'span',
-                    { style: { cursor: 'pointer' }, onClick: () => props.onRowClick?.(fr.__raw) },
-                    wrapVNode(renderCell(fr.__raw, typeof rowIndex === 'number' ? rowIndex : 0, d)),
-                  ),
-                  h('span', { style: { color: 'var(--el-text-color-secondary)' } }, status),
-                ],
+                  }}
+                >
+                  <span
+                    style={{ cursor: fr.__hasChildren ? 'pointer' : 'default' }}
+                    onClick={() => toggle(fr)}
+                  >
+                    {icon}
+                  </span>
+                  <span style={{ cursor: 'pointer' }} onClick={() => props.onRowClick?.(fr.__raw)}>
+                    {wrapVNode(
+                      renderCell(fr.__raw, typeof rowIndex === 'number' ? rowIndex : 0, d),
+                    )}
+                  </span>
+                  <span style={{ color: 'var(--el-text-color-secondary)' }}>{status}</span>
+                </div>
               )
             },
           })
@@ -229,18 +225,19 @@ export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
         }
       }
 
-      return h(
-        'div',
-        {
-          style: {
+      return (
+        <div
+          style={{
             height: typeof props.height === 'number' ? `${props.height}px` : props.height,
             width: '100%',
-          },
-        },
-        h(ElAutoResizer, null, {
-          default: ({ height, width }: { height: number; width: number }) =>
-            h(TableV2Comp, { columns: cols, data: flat.value, width, height, fixed: true }),
-        }),
+          }}
+        >
+          <ElAutoResizer>
+            {({ height, width }: { height: number; width: number }) => (
+              <ElTableV2 columns={cols} data={flat.value} width={width} height={height} fixed />
+            )}
+          </ElAutoResizer>
+        </div>
       )
     }
   },
