@@ -2,7 +2,7 @@ import { ElAutoResizer, ElTableV2, TableV2FixedDir } from 'element-plus'
 import { defineComponent, isVNode, ref, watch, type VNode, type VNodeChild } from 'vue'
 import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
 import type { TableColumnDef, TreeTableHandle, TreeTableProps } from '../table/types'
-import { defaultCellText, getRowKey } from '../table/types'
+import { defaultCellText, getRowKey } from '../table/utils'
 
 type Row = unknown
 

@@ -14,7 +14,7 @@ import type {
   TableHeaderGroup,
   TableSortRule,
 } from '../table/types'
-import { defaultCellText, getRowKey } from '../table/types'
+import { defaultCellText, getRowKey } from '../table/utils'
 
 type Row = unknown
 

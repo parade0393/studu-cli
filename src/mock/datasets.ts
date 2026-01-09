@@ -4,6 +4,11 @@ import { chance, createRng, pickOne, randInt } from './rng'
 
 type CacheKey = string
 
+/**
+ * 说明：
+ * - 所有 mock 数据都以 seed 为输入，保证“可复现”（doc/table-benchmark/MOCK-SPEC.md）。
+ * - 同一份 size/seed/columnSize 的结果会被缓存，避免切换表格库/开关时重复生成数据影响对比。
+ */
 const inventoryCache = new Map<CacheKey, InventoryRow[]>()
 const pickerCache = new Map<CacheKey, Picker[]>()
 const exceptionsCache = new Map<CacheKey, ExceptionRow[]>()
@@ -37,6 +42,11 @@ export function getPickers(seed: number): Picker[] {
   return pickers
 }
 
+/**
+ * 生成库存数据（/inventory 与 /picking 左表会复用）。
+ * - seed：决定所有“随机”的字段分布与行 id（便于复测/对比）
+ * - columnSize：决定 ext* 压力列的数量（COLUMNS.md）
+ */
 export function getInventoryRows(size: number, seed: number, columnSize: number): InventoryRow[] {
   const key = `${size}|${seed}|${columnSize}`
   const cached = inventoryCache.get(key)
@@ -135,6 +145,10 @@ export function getTreeRoots(seed: number): TreeNode[] {
   }))
 }
 
+/**
+ * 生成异常列表（/exceptions）。
+ * 注意：这里的 “随机注入” 同样由 seed 控制，以保证同一 seed 下结果稳定（MOCK-SPEC 6.1）。
+ */
 export function getExceptions(
   size: number,
   seed: number,

@@ -12,6 +12,11 @@ import { chance, createRng } from './rng'
 
 type Paged<T> = { rows: T[]; total: number }
 
+/**
+ * Mock API 层：
+ * - local：不 sleep，只在前端做 sort/filter/paginate（更像“本地数据源”）
+ * - server(mock)：增加延迟/失败注入，但返回数据仍由 seed 决定以保证可复现（MOCK-SPEC）
+ */
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
@@ -87,6 +92,7 @@ function paginate<T>(rows: T[], query: Query): Paged<T> {
 
 export async function fetchInventory(params: {
   query: Query
+  /** Mock 随机种子：用于生成稳定可复现的数据（doc/table-benchmark/MOCK-SPEC.md） */
   seed: number
   size: number
   columnSize: number
@@ -109,6 +115,7 @@ export async function fetchInventory(params: {
 
 export async function fetchExceptions(params: {
   query: Query
+  /** Mock 随机种子：用于生成稳定可复现的数据（doc/table-benchmark/MOCK-SPEC.md） */
   seed: number
   size: number
   columnSize: number
@@ -129,6 +136,7 @@ export async function fetchExceptions(params: {
 }
 
 export async function fetchTreeRoots(params: {
+  /** Mock 随机种子：用于生成稳定可复现的数据（doc/table-benchmark/MOCK-SPEC.md） */
   seed: number
   mode: 'local' | 'server'
 }): Promise<TreeNode[]> {
@@ -137,10 +145,12 @@ export async function fetchTreeRoots(params: {
 }
 
 export async function fetchTreeChildren(params: {
+  /** Mock 随机种子：同一 seed 下，同一 parentId 的子节点列表稳定 */
   seed: number
   parentId: string
   mode: 'local' | 'server'
 }): Promise<TreeNode[]> {
+  // 用 seed 派生出“按节点稳定”的随机序列：同一 parentId 总是生成同一份 children（MOCK-SPEC 4.2）。
   const rng = createRng(params.seed ^ hashString(params.parentId))
   if (params.mode === 'server') await sleep(120 + rng() * 380)
 
@@ -206,6 +216,7 @@ export async function searchPickers(params: { seed: number; q: string }): Promis
 }
 
 export async function validatePicker(params: {
+  /** Mock 随机种子：用于可控的异步校验结果与延迟（MOCK-SPEC 5.4） */
   seed: number
   pickerId: string
   lineId: string
@@ -217,6 +228,7 @@ export async function validatePicker(params: {
 }
 
 export async function submitPicking(params: {
+  /** Mock 随机种子：用于可控的逐行成功/失败结果（MOCK-SPEC 5.6） */
   seed: number
   lines: { lineId: string }[]
 }): Promise<{ results: { lineId: string; ok: boolean; message?: string }[]; requestMs: number }> {
@@ -233,6 +245,7 @@ export async function submitPicking(params: {
 }
 
 export async function exceptionAction(params: {
+  /** Mock 随机种子：用于可控的操作失败注入（MOCK-SPEC 6.3） */
   seed: number
   action: 'process' | 'assign' | 'create-adjustment'
   id: string
@@ -244,6 +257,7 @@ export async function exceptionAction(params: {
 }
 
 export async function fetchExceptionTimeline(params: {
+  /** Mock 随机种子：用于稳定的时间线长度与内容 */
   seed: number
   id: string
 }): Promise<{ at: string; text: string }[]> {

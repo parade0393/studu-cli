@@ -1,4 +1,4 @@
-import type { Component, FunctionalComponent, VNodeChild } from 'vue'
+import type { Component, FunctionalComponent } from 'vue'
 
 export type TableAlign = 'left' | 'center' | 'right'
 export type TableFixed = 'left' | 'right'
@@ -82,15 +82,4 @@ export type TableAdapter = {
     selection: boolean
     sort: boolean
   }
-}
-
-export function getRowKey<Row>(rowKey: RowKey<Row>, row: Row): string {
-  if (typeof rowKey === 'function') return rowKey(row)
-  const v = row[rowKey]
-  return typeof v === 'string' ? v : String(v)
-}
-
-export function defaultCellText(v: unknown): VNodeChild {
-  if (v == null) return ''
-  return String(v)
 }

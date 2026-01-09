@@ -2,10 +2,19 @@ export type SortOrder = 'asc' | 'desc'
 
 export type SortRule = { field: string; order: SortOrder }
 
+/**
+ * 过滤操作符（见 doc/table-benchmark/PRD.md 4.1）。
+ * 说明：这里的 op 与 UI 组件/表格库无关，仅用于统一 mock/local 的参数口径。
+ */
 export type FilterOp = 'textContains' | 'enumIn' | 'numberRange' | 'dateRange' | 'boolean'
 
 export type FilterRule = { field: string; op: FilterOp; value: unknown }
 
+/**
+ * 统一 query 参数模型（PRD 4.1）。
+ * - local：前端使用该参数对全量数据做 sort/filter/paginate
+ * - server(mock)：mock API 使用同一模型返回切片，保证口径一致便于对比
+ */
 export type Query = {
   page: number
   pageSize: number

@@ -1,7 +1,7 @@
 import { ElEmpty, ElTable, ElTableColumn } from 'element-plus'
 import { defineComponent, type VNodeChild } from 'vue'
 import type { TableColumnDef, TreeTableProps } from '../table/types'
-import { defaultCellText, getRowKey } from '../table/types'
+import { defaultCellText, getRowKey } from '../table/utils'
 
 type Row = unknown
 
