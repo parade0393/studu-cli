@@ -129,6 +129,13 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
       const selected = new Set(props.selectedRowKeys ?? [])
 
       const columns: V2Column<Row>[] = []
+      columns.push({
+        key: '_index',
+        dataKey: '_index',
+        width: 50,
+        cellRenderer: ({ rowIndex }) => wrapVNode(`${rowIndex + 1}`),
+        fixed: TableV2FixedDir.LEFT,
+      })
 
       if (props.selection && props.onUpdateSelectedRowKeys) {
         columns.push({

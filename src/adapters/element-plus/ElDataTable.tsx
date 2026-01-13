@@ -131,6 +131,7 @@ export const ElDataTable = defineComponent<DataTableProps<unknown>>({
           v-slots={{
             default: () => (
               <>
+                {<ElTableColumn type="index" width={50} fixed="left" />}
                 {props.selection && props.onUpdateSelectedRowKeys ? (
                   <ElTableColumn
                     type="selection"
