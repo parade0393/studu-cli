@@ -1,5 +1,14 @@
-import { ElAutoResizer, ElTableV2, TableV2FixedDir } from 'element-plus'
-import { defineComponent, isVNode, ref, watch, type VNode, type VNodeChild } from 'vue'
+import { ElAutoResizer, ElEmpty, ElTableV2, TableV2FixedDir } from 'element-plus'
+import {
+  defineComponent,
+  isVNode,
+  ref,
+  resolveDirective,
+  watch,
+  withDirectives,
+  type VNode,
+  type VNodeChild,
+} from 'vue'
 import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
 import type { TableColumnDef, TreeTableHandle, TreeTableProps } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/utils'
@@ -11,6 +20,11 @@ type FlatRow = Record<string, unknown> & {
   __level: number
   __hasChildren: boolean
   __loading: boolean
+}
+
+function withLoading(node: VNode, loading: boolean) {
+  const dir = resolveDirective('loading')
+  return dir ? withDirectives(node, [[dir, loading]]) : node
 }
 
 function valueOf(row: Row, col: TableColumnDef<Row>): unknown {
@@ -26,9 +40,9 @@ function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNode
 
 function wrapVNode(child: VNodeChild): VNode {
   if (isVNode(child)) return child
-  if (child == null || child === false) return <span />
-  if (Array.isArray(child)) return <span>{child}</span>
-  return <span>{String(child)}</span>
+  if (child == null || child === false) return <span class="tb-cell-text" />
+  if (Array.isArray(child)) return <span class="tb-cell-text">{child}</span>
+  return <span class="tb-cell-text">{String(child)}</span>
 }
 
 export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
@@ -225,20 +239,39 @@ export const ElTreeTableV2 = defineComponent<TreeTableProps<Row>>({
         }
       }
 
-      return (
-        <div
-          style={{
-            height: typeof props.height === 'number' ? `${props.height}px` : props.height,
-            width: '100%',
-          }}
-        >
-          <ElAutoResizer>
-            {({ height, width }: { height: number; width: number }) => (
-              <ElTableV2 columns={cols} data={flat.value} width={width} height={height} fixed />
-            )}
-          </ElAutoResizer>
+      const node = (
+        <div class={['tb-skin', props.border ? 'tb-bordered' : null]}>
+          <div
+            style={{
+              height: typeof props.height === 'number' ? `${props.height}px` : props.height,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {flat.value.length === 0 ? (
+              <div class="tb-empty">
+                <ElEmpty description={props.emptyText ?? '暂无数据'} />
+              </div>
+            ) : null}
+            <ElAutoResizer>
+              {({ height, width }: { height: number; width: number }) => (
+                <ElTableV2
+                  class="tb-table tb-table--v2"
+                  columns={cols}
+                  data={flat.value}
+                  width={width}
+                  height={height}
+                  fixed
+                  headerHeight={40}
+                  rowHeight={44}
+                />
+              )}
+            </ElAutoResizer>
+          </div>
         </div>
       )
+
+      return withLoading(node, props.loading === true)
     }
   },
 })

@@ -1,0 +1,181 @@
+:root {
+  /* Table design tokens (library-agnostic) */
+  --tb-font-size: 13px;
+  --tb-header-font-size: 12px;
+  --tb-row-height: 44px;
+  --tb-header-height: 40px;
+  --tb-radius: 10px;
+  --tb-border-color: var(--el-border-color);
+  --tb-bg: var(--el-bg-color);
+  --tb-header-bg: var(--el-fill-color-light);
+  --tb-header-text: var(--el-text-color-secondary);
+  --tb-text: var(--el-text-color-regular);
+  --tb-text-secondary: var(--el-text-color-secondary);
+  --tb-cell-padding-x: 10px;
+  --tb-cell-padding-y: 6px;
+  --tb-row-hover-bg: var(--el-fill-color-light);
+  --tb-row-selected-bg: var(--el-color-primary-light-9);
+}
+
+/*
+  Table skin: apply on a wrapper so different table implementations (ElTable, ElTableV2, etc.)
+  can share the same visual language.
+*/
+.tb-skin {
+  border-radius: var(--tb-radius);
+  overflow: hidden;
+  background: var(--tb-bg);
+}
+
+.tb-skin.tb-bordered {
+  border: 1px solid var(--tb-border-color);
+}
+
+/* Force both ElTable and ElTableV2 to inherit the same colors (TableV2 sets defaults on itself). */
+.tb-skin .el-table,
+.tb-skin .el-table-v2 {
+  --el-table-border-color: var(--tb-border-color);
+  --el-table-text-color: var(--tb-text);
+  --el-table-header-text-color: var(--tb-header-text);
+  --el-table-header-bg-color: var(--tb-header-bg);
+  --el-table-row-hover-bg-color: var(--tb-row-hover-bg);
+  --el-table-current-row-bg-color: var(--tb-row-selected-bg);
+  --el-table-bg-color: var(--tb-bg);
+  --el-table-tr-bg-color: var(--tb-bg);
+}
+
+/* Shared small text helpers */
+.tb-skin .tb-cell-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Element Plus: ElTable ---------- */
+.tb-skin .el-table {
+  font-size: var(--tb-font-size);
+}
+
+.tb-skin .el-table__header .cell {
+  color: var(--tb-header-text);
+}
+
+.tb-skin .el-table__body .cell {
+  color: var(--tb-text);
+}
+
+.tb-skin .el-table__header th {
+  font-size: var(--tb-header-font-size);
+  font-weight: 600;
+  height: var(--tb-header-height);
+  padding: 0 var(--tb-cell-padding-x);
+}
+
+.tb-skin .el-table__cell {
+  padding: var(--tb-cell-padding-y) var(--tb-cell-padding-x);
+}
+
+.tb-skin .el-table__body tr:hover > td.el-table__cell {
+  background: var(--tb-row-hover-bg);
+}
+
+.tb-skin .el-table__body tr.current-row > td.el-table__cell {
+  background: var(--tb-row-selected-bg);
+}
+
+/* ---------- Element Plus: ElTableV2 ---------- */
+.tb-skin .el-table-v2 {
+  font-size: var(--tb-font-size);
+  background: var(--tb-bg);
+}
+
+.tb-skin .el-table-v2__header-row {
+  background: var(--tb-header-bg);
+}
+
+.tb-skin .el-table-v2__header-cell {
+  font-size: var(--tb-header-font-size);
+  font-weight: 600;
+  color: var(--tb-header-text);
+}
+
+.tb-skin .el-table-v2__row-cell {
+  color: var(--tb-text);
+  padding: 0 var(--tb-cell-padding-x);
+  border-right: 1px solid var(--tb-border-color);
+  height: var(--tb-row-height);
+  display: flex;
+  align-items: center;
+}
+
+.tb-skin .el-table-v2__row {
+  border-bottom: 1px solid var(--tb-border-color);
+}
+
+.tb-skin .el-table-v2__row:hover {
+  background: var(--tb-row-hover-bg);
+}
+
+.tb-skin .tb-v2-standalone-header {
+  height: var(--tb-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  background: var(--tb-header-bg);
+  border-right: 1px solid var(--tb-border-color);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.tb-skin .tb-v2-standalone-header--top {
+  border-bottom: 1px solid var(--tb-border-color);
+}
+
+/* Visually “rowspan” for index/selection columns by masking the row divider under them. */
+.tb-skin .tb-v2-standalone-header--top::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--tb-header-bg);
+}
+
+.tb-skin .tb-v2-standalone-header--bottom {
+  color: transparent;
+}
+
+.tb-skin .tb-v2-group-header {
+  height: var(--tb-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border-right: 1px solid var(--tb-border-color);
+  border-bottom: 1px solid var(--tb-border-color);
+  background: var(--tb-header-bg);
+  color: var(--tb-header-text);
+}
+
+/* Make V2 "fixed columns" divider match ElTable */
+.tb-skin .el-table-v2__fixed-left,
+.tb-skin .el-table-v2__fixed-right {
+  box-shadow: none;
+  border-color: var(--tb-border-color);
+}
+
+/* Empty overlay (shared) */
+.tb-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--tb-text-secondary);
+  background: var(--tb-bg);
+}

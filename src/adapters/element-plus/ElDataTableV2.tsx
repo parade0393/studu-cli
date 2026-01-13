@@ -1,13 +1,21 @@
 import {
   ElAutoResizer,
   ElCheckbox,
+  ElEmpty,
   ElTableV2,
   TableV2FixedDir,
   TableV2SortOrder,
 } from 'element-plus'
 import type { SortBy, TableV2CustomizedHeaderSlotParam } from 'element-plus'
 import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
-import { defineComponent, isVNode, type VNode, type VNodeChild } from 'vue'
+import {
+  defineComponent,
+  isVNode,
+  resolveDirective,
+  withDirectives,
+  type VNode,
+  type VNodeChild,
+} from 'vue'
 import type {
   DataTableProps,
   TableColumnDef,
@@ -17,6 +25,11 @@ import type {
 import { defaultCellText, getRowKey } from '../table/utils'
 
 type Row = unknown
+
+function withLoading(node: VNode, loading: boolean) {
+  const dir = resolveDirective('loading')
+  return dir ? withDirectives(node, [[dir, loading]]) : node
+}
 
 function valueOf(row: Row, col: TableColumnDef<Row>): unknown {
   if (col.valueGetter) return col.valueGetter(row)
@@ -44,9 +57,9 @@ function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNode
 
 function wrapVNode(child: VNodeChild): VNode {
   if (isVNode(child)) return child
-  if (child == null || child === false) return <span />
-  if (Array.isArray(child)) return <span>{child}</span>
-  return <span>{String(child)}</span>
+  if (child == null || child === false) return <span class="tb-cell-text" />
+  if (Array.isArray(child)) return <span class="tb-cell-text">{child}</span>
+  return <span class="tb-cell-text">{String(child)}</span>
 }
 
 function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
@@ -55,45 +68,74 @@ function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
     for (const c of g.columns) keyToGroup.set(c.key, g.title)
   }
 
+  const keyOf = (col: { dataKey?: unknown; key?: unknown }) => String(col.dataKey ?? col.key ?? '')
+  const isStandaloneHeader = (key: string) => key === '_index' || key === '__sel'
+
   return ({ cells, columns, headerIndex }: TableV2CustomizedHeaderSlotParam) => {
-    if (headerIndex === 1) return cells
+    const systemCount = columns.findIndex((c) => !c || !isStandaloneHeader(keyOf(c)))
+    const start = systemCount === -1 ? columns.length : systemCount
+
+    if (headerIndex === 1) {
+      const row2: VNodeChild[] = []
+      for (let i = 0; i < start; i++) {
+        const col = columns[i]
+        if (!col) continue
+        row2.push(
+          <div
+            role="columnheader"
+            class="tb-v2-standalone-header tb-v2-standalone-header--bottom"
+            style={{ width: `${Number(col.width ?? 0)}px` }}
+          />,
+        )
+      }
+      row2.push(...cells.slice(start))
+      return row2
+    }
 
     const groupCells: VNodeChild[] = []
     let width = 0
     let currentLabel = ''
 
     const flush = (label: string) => {
+      if (!label) {
+        groupCells.push(
+          <div role="columnheader" class="tb-v2-group-header" style={{ width: `${width}px` }} />,
+        )
+        width = 0
+        return
+      }
       groupCells.push(
-        <div
-          role="columnheader"
-          style={{
-            width: `${width}px`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 600,
-            borderRight: '1px solid var(--el-border-color)',
-            background: 'var(--el-fill-color-light)',
-          }}
-        >
+        <div role="columnheader" class="tb-v2-group-header" style={{ width: `${width}px` }}>
           {label}
         </div>,
       )
       width = 0
     }
 
-    for (let i = 0; i < columns.length; i++) {
+    for (let i = 0; i < start; i++) {
       const col = columns[i]
       if (!col) continue
-      const key = String(col.dataKey ?? col.key ?? '')
-      const label = key === '__sel' ? '' : (keyToGroup.get(key) ?? '')
-      if (i === 0) currentLabel = label
+      groupCells.push(
+        <div
+          role="columnheader"
+          class="tb-v2-standalone-header tb-v2-standalone-header--top"
+          style={{ width: `${Number(col.width ?? 0)}px` }}
+        />,
+      )
+    }
+
+    for (let i = start; i < columns.length; i++) {
+      const col = columns[i]
+      if (!col) continue
+      const key = keyOf(col)
+      const label = keyToGroup.get(key) ?? ''
+      if (i === start) currentLabel = label
 
       width += Number(col.width ?? 0)
 
       const next = columns[i + 1]
-      const nextKey = next ? String(next.dataKey ?? next.key ?? '') : ''
-      const nextLabel = nextKey === '__sel' ? '' : (keyToGroup.get(nextKey) ?? '')
+      const nextKey = next ? keyOf(next) : ''
+      const nextLabel = keyToGroup.get(nextKey) ?? ''
       if (i === columns.length - 1 || nextLabel !== currentLabel) {
         flush(currentLabel)
         currentLabel = nextLabel
@@ -133,6 +175,7 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
         key: '_index',
         dataKey: '_index',
         width: 50,
+        align: 'center',
         cellRenderer: ({ rowIndex }) => wrapVNode(`${rowIndex + 1}`),
         fixed: TableV2FixedDir.LEFT,
       })
@@ -142,7 +185,8 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
           key: '__sel',
           dataKey: '__sel',
           title: '',
-          width: 48,
+          width: 50,
+          align: 'center',
           fixed: TableV2FixedDir.LEFT,
           headerCellRenderer: () => {
             const all = data.length > 0 && data.every((r) => selected.has(rowKey(r)))
@@ -201,38 +245,50 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
 
       const sortByProps: Partial<{ sortBy: SortBy }> = v2Sort ? { sortBy: v2Sort } : {}
 
-      return (
-        <div
-          style={{
-            height: typeof props.height === 'number' ? `${props.height}px` : props.height,
-            width: '100%',
-          }}
-        >
-          <ElAutoResizer>
-            {({ height, width }: { height: number; width: number }) => (
-              <ElTableV2
-                {...sortByProps}
-                columns={columns}
-                data={data}
-                width={width}
-                height={height}
-                fixed
-                headerHeight={headerHeight}
-                onColumnSort={
-                  props.onUpdateSort
-                    ? (sb: SortBy) => props.onUpdateSort?.(fromV2Sort(sb))
-                    : undefined
-                }
-                v-slots={
-                  headerRenderer
-                    ? { header: (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p) }
-                    : undefined
-                }
-              />
-            )}
-          </ElAutoResizer>
+      const node = (
+        <div class={['tb-skin', props.border ? 'tb-bordered' : null]}>
+          <div
+            style={{
+              height: typeof props.height === 'number' ? `${props.height}px` : props.height,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {data.length === 0 ? (
+              <div class="tb-empty">
+                <ElEmpty description={props.emptyText ?? '暂无数据'} />
+              </div>
+            ) : null}
+            <ElAutoResizer>
+              {({ height, width }: { height: number; width: number }) => (
+                <ElTableV2
+                  {...sortByProps}
+                  class="tb-table tb-table--v2"
+                  columns={columns}
+                  data={data}
+                  width={width}
+                  height={height}
+                  fixed
+                  headerHeight={headerHeight}
+                  rowHeight={44}
+                  onColumnSort={
+                    props.onUpdateSort
+                      ? (sb: SortBy) => props.onUpdateSort?.(fromV2Sort(sb))
+                      : undefined
+                  }
+                  v-slots={
+                    headerRenderer
+                      ? { header: (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p) }
+                      : undefined
+                  }
+                />
+              )}
+            </ElAutoResizer>
+          </div>
         </div>
       )
+
+      return withLoading(node, props.loading === true)
     }
   },
 })

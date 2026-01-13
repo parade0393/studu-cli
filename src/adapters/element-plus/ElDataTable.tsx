@@ -1,5 +1,5 @@
 import { ElEmpty, ElTable, ElTableColumn } from 'element-plus'
-import { defineComponent, type VNodeChild } from 'vue'
+import { defineComponent, resolveDirective, withDirectives, type VNode, type VNodeChild } from 'vue'
 import type {
   DataTableProps,
   TableColumnDef,
@@ -7,6 +7,11 @@ import type {
   TableSortRule,
 } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/utils'
+
+function withLoading(node: VNode, loading: boolean) {
+  const dir = resolveDirective('loading')
+  return dir ? withDirectives(node, [[dir, loading]]) : node
+}
 
 function toElementSort(
   sort: TableSortRule[] | undefined,
@@ -105,51 +110,56 @@ export const ElDataTable = defineComponent<DataTableProps<unknown>>({
 
       const grouped = Array.isArray(props.headerGroups) && props.headerGroups.length > 0
 
-      return (
-        <ElTable
-          data={props.rows}
-          rowKey={rowKeyFn}
-          height={props.height}
-          border={props.border}
-          defaultSort={toElementSort(props.sort)}
-          spanMethod={spanMethod || undefined}
-          emptyText={props.emptyText}
-          onSort-change={
-            props.onUpdateSort
-              ? (e: { prop: string; order: 'ascending' | 'descending' | null }) =>
-                  props.onUpdateSort?.(fromElementSort(e))
-              : undefined
-          }
-          onSelection-change={
-            props.selection && props.onUpdateSelectedRowKeys
-              ? (selectedRows: unknown[]) => {
-                  const keys = selectedRows.map((r) => rowKeyFn(r))
-                  props.onUpdateSelectedRowKeys?.(keys)
-                }
-              : undefined
-          }
-          v-slots={{
-            default: () => (
-              <>
-                {<ElTableColumn type="index" width={50} fixed="left" />}
-                {props.selection && props.onUpdateSelectedRowKeys ? (
-                  <ElTableColumn
-                    type="selection"
-                    width={50}
-                    fixed="left"
-                    selectable={() => true}
-                    reserveSelection
-                  />
-                ) : null}
-                {grouped
-                  ? renderGroupedColumns(props.headerGroups as TableHeaderGroup<unknown>[])
-                  : renderColumns(columns)}
-              </>
-            ),
-            empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
-          }}
-        />
+      const node = (
+        <div class="tb-skin">
+          <ElTable
+            class="tb-table"
+            data={props.rows}
+            rowKey={rowKeyFn}
+            height={props.height}
+            border={props.border}
+            defaultSort={toElementSort(props.sort)}
+            spanMethod={spanMethod || undefined}
+            emptyText={props.emptyText}
+            onSort-change={
+              props.onUpdateSort
+                ? (e: { prop: string; order: 'ascending' | 'descending' | null }) =>
+                    props.onUpdateSort?.(fromElementSort(e))
+                : undefined
+            }
+            onSelection-change={
+              props.selection && props.onUpdateSelectedRowKeys
+                ? (selectedRows: unknown[]) => {
+                    const keys = selectedRows.map((r) => rowKeyFn(r))
+                    props.onUpdateSelectedRowKeys?.(keys)
+                  }
+                : undefined
+            }
+            v-slots={{
+              default: () => (
+                <>
+                  {<ElTableColumn type="index" width={50} fixed="left" />}
+                  {props.selection && props.onUpdateSelectedRowKeys ? (
+                    <ElTableColumn
+                      type="selection"
+                      width={50}
+                      fixed="left"
+                      selectable={() => true}
+                      reserveSelection
+                    />
+                  ) : null}
+                  {grouped
+                    ? renderGroupedColumns(props.headerGroups as TableHeaderGroup<unknown>[])
+                    : renderColumns(columns)}
+                </>
+              ),
+              empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
+            }}
+          />
+        </div>
       )
+
+      return withLoading(node, props.loading === true)
     }
   },
 })

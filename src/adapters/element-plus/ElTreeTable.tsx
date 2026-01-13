@@ -1,9 +1,14 @@
 import { ElEmpty, ElTable, ElTableColumn } from 'element-plus'
-import { defineComponent, type VNodeChild } from 'vue'
+import { defineComponent, resolveDirective, withDirectives, type VNode, type VNodeChild } from 'vue'
 import type { TableColumnDef, TreeTableProps } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/utils'
 
 type Row = unknown
+
+function withLoading(node: VNode, loading: boolean) {
+  const dir = resolveDirective('loading')
+  return dir ? withDirectives(node, [[dir, loading]]) : node
+}
 
 function valueOf(row: Row, col: TableColumnDef<Row>): unknown {
   if (col.valueGetter) return col.valueGetter(row)
@@ -58,34 +63,39 @@ export const ElTreeTable = defineComponent<TreeTableProps<Row>>({
         : (props.roots as Row[])
       const columns = props.columns as TableColumnDef<Row>[]
 
-      return (
-        <ElTable
-          data={roots}
-          rowKey={rowKeyFn}
-          height={props.height}
-          border={props.border}
-          lazy
-          treeProps={{ hasChildren: 'hasChildren', children: 'children' }}
-          load={async (row: Row, _treeNode: unknown, resolve: (rows: Row[]) => void) => {
-            const children = await props.loadChildren(row)
-            const filtered = props.filterRow
-              ? children.filter((c) => props.filterRow?.(c))
-              : children
-            resolve(filtered)
-          }}
-          onRow-click={props.onRowClick ? (row: Row) => props.onRowClick?.(row) : undefined}
-          onSelection-change={
-            props.selection && props.onUpdateSelectedRowKeys
-              ? (selectedRows: Row[]) =>
-                  props.onUpdateSelectedRowKeys?.(selectedRows.map((r) => rowKeyFn(r)))
-              : undefined
-          }
-          v-slots={{
-            default: () => renderColumns(columns),
-            empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
-          }}
-        />
+      const node = (
+        <div class="tb-skin">
+          <ElTable
+            class="tb-table"
+            data={roots}
+            rowKey={rowKeyFn}
+            height={props.height}
+            border={props.border}
+            lazy
+            treeProps={{ hasChildren: 'hasChildren', children: 'children' }}
+            load={async (row: Row, _treeNode: unknown, resolve: (rows: Row[]) => void) => {
+              const children = await props.loadChildren(row)
+              const filtered = props.filterRow
+                ? children.filter((c) => props.filterRow?.(c))
+                : children
+              resolve(filtered)
+            }}
+            onRow-click={props.onRowClick ? (row: Row) => props.onRowClick?.(row) : undefined}
+            onSelection-change={
+              props.selection && props.onUpdateSelectedRowKeys
+                ? (selectedRows: Row[]) =>
+                    props.onUpdateSelectedRowKeys?.(selectedRows.map((r) => rowKeyFn(r)))
+                : undefined
+            }
+            v-slots={{
+              default: () => renderColumns(columns),
+              empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
+            }}
+          />
+        </div>
       )
+
+      return withLoading(node, props.loading === true)
     }
   },
 })

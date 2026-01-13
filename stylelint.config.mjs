@@ -7,6 +7,14 @@ export default {
     },
   ],
   rules: {
+    // 允许 BEM（Element Plus 等三方组件类名，如 el-table__header / el-table-v2__row-cell）
+    'selector-class-pattern': [
+      '^[a-z][a-z0-9-]*(?:__(?:[a-z0-9-]+))?(?:--(?:[a-z0-9-]+))?$',
+      {
+        message:
+          'Expected class selector to be kebab-case or BEM (block__element--modifier) in lowercase.',
+      },
+    ],
     // 允许 Vue 的 deep 选择器
     'selector-pseudo-class-no-unknown': [
       true,
