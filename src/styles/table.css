@@ -93,12 +93,14 @@
 
 .tb-skin .el-table-v2__header-row {
   background: var(--tb-header-bg);
+  padding-inline-end: unset;
 }
 
 .tb-skin .el-table-v2__header-cell {
   font-size: var(--tb-header-font-size);
   font-weight: 600;
   color: var(--tb-header-text);
+  border-right: 1px solid var(--tb-border-color);
 }
 
 .tb-skin .el-table-v2__row-cell {
@@ -132,10 +134,14 @@
 
 .tb-skin .tb-v2-standalone-header--top {
   border-bottom: 1px solid var(--tb-border-color);
+
+  /* 跨行合并效果：占据两行的高度 */
+  height: calc(var(--tb-header-height) * 2);
 }
 
 /* Visually “rowspan” for index/selection columns by masking the row divider under them. */
-.tb-skin .tb-v2-standalone-header--top::after {
+
+/* .tb-skin .tb-v2-standalone-header--top::after {
   content: '';
   position: absolute;
   left: 0;
@@ -143,7 +149,7 @@
   bottom: -1px;
   height: 1px;
   background: var(--tb-header-bg);
-}
+} */
 
 .tb-skin .tb-v2-standalone-header--bottom {
   color: transparent;
@@ -153,12 +159,12 @@
   height: var(--tb-header-height);
   display: flex;
   align-items: center;
-  justify-content: center;
   font-weight: 600;
   border-right: 1px solid var(--tb-border-color);
   border-bottom: 1px solid var(--tb-border-color);
   background: var(--tb-header-bg);
   color: var(--tb-header-text);
+  padding: 0 calc(var(--tb-cell-padding-x) + 12px);
 }
 
 /* Make V2 "fixed columns" divider match ElTable */

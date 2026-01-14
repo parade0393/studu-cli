@@ -63,12 +63,14 @@ function wrapVNode(child: VNodeChild): VNode {
 }
 
 function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
+  //建立一个映射：列的 key → 所属分组的标题
   const keyToGroup = new Map<string, string>()
   for (const g of groups) {
     for (const c of g.columns) keyToGroup.set(c.key, g.title)
   }
 
   const keyOf = (col: { dataKey?: unknown; key?: unknown }) => String(col.dataKey ?? col.key ?? '')
+  //判断是否是系统列（序号列 _index 或选择列 __sel） 序号列或者选择列
   const isStandaloneHeader = (key: string) => key === '_index' || key === '__sel'
 
   return ({ cells, columns, headerIndex }: TableV2CustomizedHeaderSlotParam) => {
@@ -77,17 +79,19 @@ function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
 
     if (headerIndex === 1) {
       const row2: VNodeChild[] = []
+      // 系统列在第二行显示空占位符,（因为在第一行已经跨行显示）
       for (let i = 0; i < start; i++) {
         const col = columns[i]
         if (!col) continue
         row2.push(
           <div
             role="columnheader"
-            class="tb-v2-standalone-header tb-v2-standalone-header--bottom"
-            style={{ width: `${Number(col.width ?? 0)}px` }}
+            class="tb-v2-standalone-header--placeholder"
+            style={{ width: `${Number(col.width ?? 0)}px`, height: 0 }}
           />,
         )
       }
+      // 业务列使用默认的列标题
       row2.push(...cells.slice(start))
       return row2
     }
@@ -112,6 +116,7 @@ function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
       width = 0
     }
 
+    // 系统列在第一行显示实际内容（看起来跨两行）
     for (let i = 0; i < start; i++) {
       const col = columns[i]
       if (!col) continue
@@ -120,7 +125,9 @@ function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
           role="columnheader"
           class="tb-v2-standalone-header tb-v2-standalone-header--top"
           style={{ width: `${Number(col.width ?? 0)}px` }}
-        />,
+        >
+          {cells[i]}
+        </div>,
       )
     }
 
@@ -190,6 +197,7 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
           fixed: TableV2FixedDir.LEFT,
           headerCellRenderer: () => {
             const all = data.length > 0 && data.every((r) => selected.has(rowKey(r)))
+            const containsChecked = data.length > 0 && data.some((r) => selected.has(rowKey(r)))
             return (
               <ElCheckbox
                 modelValue={all}
@@ -198,6 +206,7 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
                   const keys = checked ? data.map((r) => rowKey(r)) : []
                   props.onUpdateSelectedRowKeys?.(keys)
                 }}
+                indeterminate={containsChecked}
               />
             )
           },
