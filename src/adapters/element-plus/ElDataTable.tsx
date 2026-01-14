@@ -135,7 +135,8 @@ export const ElDataTable = defineComponent<DataTableProps<unknown>>({
                   }
                 : undefined
             }
-            v-slots={{
+          >
+            {{
               default: () => (
                 <>
                   {<ElTableColumn type="index" width={50} fixed="left" />}
@@ -155,7 +156,7 @@ export const ElDataTable = defineComponent<DataTableProps<unknown>>({
               ),
               empty: () => <ElEmpty description={props.emptyText ?? '暂无数据'} />,
             }}
-          />
+          </ElTable>
         </div>
       )
 

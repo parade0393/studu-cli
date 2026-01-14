@@ -33,8 +33,8 @@ export type InventoryColumnSpec = {
 }
 
 const base: InventoryColumnSpec[] = [
-  { key: 'sku', title: 'SKU', width: 140, fixed: 'left' },
-  { key: 'skuName', title: '名称', width: 220, fixed: 'left' },
+  { key: 'sku', title: 'SKU', width: 140 },
+  { key: 'skuName', title: '名称', width: 220 },
   { key: 'batch', title: '批次', width: 140 },
   { key: 'owner', title: '货主', width: 140 },
   { key: 'supplier', title: '供应商', width: 160 },
@@ -42,7 +42,7 @@ const base: InventoryColumnSpec[] = [
   { key: 'zone', title: '库区', width: 120 },
   { key: 'bin', title: '库位', width: 140 },
   { key: 'onHand', title: '现有', width: 110, align: 'right' },
-  { key: 'available', title: '可用', width: 110, align: 'right', fixed: 'right' },
+  { key: 'available', title: '可用', width: 110, align: 'right' },
   { key: 'reserved', title: '占用', width: 110, align: 'right' },
   { key: 'damaged', title: '残损', width: 110, align: 'right' },
   { key: 'frozen', title: '冻结数', width: 110, align: 'right' },

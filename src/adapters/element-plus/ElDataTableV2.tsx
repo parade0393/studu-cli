@@ -276,12 +276,13 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
                       ? (sb: SortBy) => props.onUpdateSort?.(fromV2Sort(sb))
                       : undefined
                   }
-                  v-slots={
-                    headerRenderer
-                      ? { header: (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p) }
-                      : undefined
-                  }
-                />
+                >
+                  {{
+                    header: headerRenderer
+                      ? (p: TableV2CustomizedHeaderSlotParam) => headerRenderer(p)
+                      : undefined,
+                  }}
+                </ElTableV2>
               )}
             </ElAutoResizer>
           </div>

@@ -111,20 +111,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, reactive, ref, type FunctionalComponent } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, reactive, ref } from 'vue'
 import { fetchInventory } from '../mock/api'
 import { getInventoryColumns } from '../columns/inventory'
 import type { FilterRule, InventoryRow, Query } from '../types/benchmark'
 import { useBenchmarkStore } from '../stores/benchmark'
-import { formatDateTime, formatNumber } from '../utils/format'
 import { useTableAdapter } from '../adapters/table/useTableAdapter'
-import type {
-  TableCellCtx,
-  TableColumnDef,
-  TableHeaderGroup,
-  TableSortRule,
-} from '../adapters/table/types'
+import { buildInventoryColumns } from '../columns/inventoryColumns'
+import type { TableColumnDef, TableHeaderGroup, TableSortRule } from '../adapters/table/types'
 
 const store = useBenchmarkStore()
 const adapter = useTableAdapter()
@@ -238,125 +232,7 @@ const specs = computed(() => {
 })
 
 const columns = computed<TableColumnDef<InventoryRow>[]>(() => {
-  const out: TableColumnDef<InventoryRow>[] = []
-
-  const makeLink: (text: string, onClick: () => void) => ReturnType<typeof h> = (text, onClick) =>
-    h('a', { class: 'link', onClick }, text)
-
-  const cellText: FunctionalComponent<TableCellCtx<InventoryRow>> = ({ row, rowIndex }) =>
-    h('span', { title: `${row.sku}-${rowIndex}` }, row.sku)
-
-  for (const s of specs.value) {
-    const key = String(s.key)
-    const base: TableColumnDef<InventoryRow> = {
-      key,
-      title: s.title,
-      width: s.width,
-      align: s.align,
-      fixed: s.fixed,
-      sortable:
-        ['available', 'onHand', 'expireAt', 'riskLevel'].includes(key) || key.startsWith('ext'),
-    }
-
-    if (key === 'opView') {
-      out.push({
-        ...base,
-        valueGetter: () => '',
-        cell: ({ row }) =>
-          makeLink('查看', () => ElMessage.info(`查看：${row.sku} / ${row.batch}`)),
-      })
-      continue
-    }
-    if (key === 'opCopySku') {
-      out.push({
-        ...base,
-        valueGetter: () => '',
-        cell: ({ row }) =>
-          makeLink('复制', async () => {
-            await navigator.clipboard.writeText(row.sku)
-            ElMessage.success('已复制 SKU')
-          }),
-      })
-      continue
-    }
-
-    if (key === 'qualityStatus') {
-      out.push({
-        ...base,
-        cell: ({ row }) => {
-          const qs = row.qualityStatus ?? 'UNKNOWN'
-          const cls =
-            qs === 'OK'
-              ? 'tag-ok'
-              : qs === 'HOLD'
-                ? 'tag-hold'
-                : qs === 'NG'
-                  ? 'tag-ng'
-                  : 'tag-info'
-          return h('span', { class: `tag ${cls}` }, qs)
-        },
-      })
-      continue
-    }
-    if (key === 'freezeStatus') {
-      out.push({
-        ...base,
-        cell: ({ row }) =>
-          h(
-            'span',
-            { class: `tag tag-${row.freezeStatus === 'FROZEN' ? 'warn' : 'info'}` },
-            row.freezeStatus,
-          ),
-      })
-      continue
-    }
-    if (key === 'abcClass') {
-      out.push({ ...base, cell: ({ row }) => h('span', { class: 'tag tag-info' }, row.abcClass) })
-      continue
-    }
-    if (key === 'riskLevel') {
-      out.push({
-        ...base,
-        cell: ({ row }) =>
-          h('span', { class: 'risk', 'data-level': row.riskLevel }, `L${row.riskLevel}`),
-      })
-      continue
-    }
-
-    if (key.endsWith('At') || key === 'expireAt' || key.startsWith('extDate')) {
-      out.push({
-        ...base,
-        valueGetter: (r) =>
-          formatDateTime(asIsoString((r as unknown as Record<string, unknown>)[key])),
-      })
-      continue
-    }
-
-    if (
-      ['onHand', 'available', 'reserved', 'damaged', 'frozen'].includes(key) ||
-      key.startsWith('extNum')
-    ) {
-      out.push({
-        ...base,
-        cell: ({ row }) => {
-          const v = (row as Record<string, unknown>)[key]
-          const n = typeof v === 'number' ? v : Number(v)
-          const cls = key === 'available' && row.available <= 5 ? 'num warn' : 'num'
-          return h('span', { class: cls }, formatNumber(Number.isFinite(n) ? n : null))
-        },
-      })
-      continue
-    }
-
-    if (key === 'sku') {
-      out.push({ ...base, cell: cellText })
-      continue
-    }
-
-    out.push({ ...base })
-  }
-
-  return out
+  return buildInventoryColumns(specs.value)
 })
 
 const headerGroups = computed<TableHeaderGroup<InventoryRow>[] | undefined>(() => {
@@ -422,10 +298,6 @@ const spanMethod = computed(() => {
 })
 
 runQuery()
-
-function asIsoString(v: unknown): string | null {
-  return typeof v === 'string' ? v : null
-}
 </script>
 
 <style scoped>
@@ -468,68 +340,70 @@ function asIsoString(v: unknown): string | null {
   margin: 0 8px;
 }
 
-.link {
-  color: var(--el-color-primary);
-  cursor: pointer;
-  text-decoration: none;
-}
+:deep(.tb-skin) {
+  .link {
+    color: var(--el-color-primary);
+    cursor: pointer;
+    text-decoration: none;
+  }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 10px;
-  border: 1px solid var(--el-border-color);
-  font-size: 12px;
-  line-height: 18px;
-}
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color);
+    font-size: 12px;
+    line-height: 18px;
+  }
 
-.tag-ok {
-  color: var(--el-color-success);
-  border-color: var(--el-color-success-light-5);
-  background: var(--el-color-success-light-9);
-}
+  .tag-ok {
+    color: var(--el-color-success);
+    border-color: var(--el-color-success-light-5);
+    background: var(--el-color-success-light-9);
+  }
 
-.tag-hold {
-  color: var(--el-color-warning);
-  border-color: var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
-}
+  .tag-hold {
+    color: var(--el-color-warning);
+    border-color: var(--el-color-warning-light-5);
+    background: var(--el-color-warning-light-9);
+  }
 
-.tag-ng {
-  color: var(--el-color-danger);
-  border-color: var(--el-color-danger-light-5);
-  background: var(--el-color-danger-light-9);
-}
+  .tag-ng {
+    color: var(--el-color-danger);
+    border-color: var(--el-color-danger-light-5);
+    background: var(--el-color-danger-light-9);
+  }
 
-.tag-warn {
-  color: var(--el-color-warning);
-  border-color: var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
-}
+  .tag-warn {
+    color: var(--el-color-warning);
+    border-color: var(--el-color-warning-light-5);
+    background: var(--el-color-warning-light-9);
+  }
 
-.tag-info {
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color-light);
-}
+  .tag-info {
+    color: var(--el-text-color-secondary);
+    background: var(--el-fill-color-light);
+  }
 
-.num {
-  font-variant-numeric: tabular-nums;
-}
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
 
-.num.warn {
-  color: var(--el-color-danger);
-  font-weight: 600;
-}
+  .num.warn {
+    color: var(--el-color-danger);
+    font-weight: 600;
+  }
 
-.risk[data-level='5'] {
-  color: var(--el-color-danger);
-  font-weight: 700;
-}
+  .risk[data-level='5'] {
+    color: var(--el-color-danger);
+    font-weight: 700;
+  }
 
-.risk[data-level='4'] {
-  color: var(--el-color-warning);
-  font-weight: 700;
+  .risk[data-level='4'] {
+    color: var(--el-color-warning);
+    font-weight: 700;
+  }
 }
 </style>

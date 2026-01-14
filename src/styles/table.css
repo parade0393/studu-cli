@@ -22,7 +22,7 @@
   can share the same visual language.
 */
 .tb-skin {
-  border-radius: var(--tb-radius);
+  /* border-radius: var(--tb-radius); */
   overflow: hidden;
   background: var(--tb-bg);
 }
