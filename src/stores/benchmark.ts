@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 export type LibraryMode = 'el-table' | 'el-table-v2'
 export type DataMode = 'local' | 'server'
-export type DataSize = 1000 | 10000 | 100000
+export type DataSize = 100 | 1000 | 10000 | 100000
 export type ColumnSize = 30 | 60 | 120
 
 const DEFAULT_SEED = 20260108

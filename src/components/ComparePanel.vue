@@ -10,8 +10,17 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="数据规模">
+          <el-form-item>
+            <template #label>
+              <span class="label-with-tip">
+                数据规模
+                <el-tooltip content="修改后点击查询生效" placement="top">
+                  <span class="tip-icon" aria-label="提示">?</span>
+                </el-tooltip>
+              </span>
+            </template>
             <el-radio-group v-model="store.dataSize">
+              <el-radio-button :value="100">0.1k</el-radio-button>
               <el-radio-button :value="1000">1k</el-radio-button>
               <el-radio-button :value="10000">10k</el-radio-button>
               <el-radio-button :value="100000">100k</el-radio-button>
@@ -131,6 +140,26 @@ async function copyConfig() {
 
 .metric.wide {
   grid-column: 1 / -1;
+}
+
+.label-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--el-text-color-secondary);
+  cursor: help;
 }
 
 .label {

@@ -96,15 +96,6 @@
           <span class="dot">·</span>
           <span>rows: {{ rows.length }}</span>
         </div>
-        <el-pagination
-          v-model:current-page="query.page"
-          v-model:page-size="query.pageSize"
-          layout="prev, pager, next, sizes"
-          :page-sizes="[50, 100, 200]"
-          :total="total"
-          @current-change="runQuery"
-          @size-change="runQuery"
-        />
       </div>
     </el-card>
   </div>
@@ -150,7 +141,7 @@ const selectedRowKeys = ref<string[]>([])
 
 const modeHint = computed(() => {
   if (store.libraryMode === 'el-table' && store.toggles.rowVirtual) {
-    return 'Element Plus Table 不提供行虚拟滚动（此 Demo 通过分页作为降级）；切换到 Table V2 可观察虚拟滚动表现。'
+    return 'Element Plus Table 不提供行虚拟滚动（此 Demo 固定全量渲染）；切换到 Table V2 可观察虚拟滚动表现。'
   }
   if (store.libraryMode === 'el-table-v2' && store.toggles.merge) {
     return 'Element Plus Table V2 不支持单元格合并（merge）。'
@@ -192,6 +183,8 @@ async function runQuery() {
   loading.value = true
   try {
     query.filters = buildFilters()
+    query.page = 1
+    query.pageSize = store.dataSize
     const res = await fetchInventory({
       query,
       seed: store.seed,
