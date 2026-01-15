@@ -83,6 +83,19 @@
 </template>
 
 <script setup lang="ts">
+import {
+  ElButton,
+  ElCard,
+  ElCheckbox,
+  ElDivider,
+  ElForm,
+  ElFormItem,
+  ElOption,
+  ElRadioButton,
+  ElRadioGroup,
+  ElSelect,
+  ElTooltip,
+} from 'element-plus'
 import { useBenchmarkStore } from '../stores/benchmark'
 
 const store = useBenchmarkStore()

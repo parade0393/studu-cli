@@ -155,7 +155,20 @@
 
 <script setup lang="ts">
 import { computed, h, ref, type FunctionalComponent } from 'vue'
-import { ElInput, ElInputNumber, ElMessage, ElOption, ElSelect } from 'element-plus'
+import {
+  ElAlert,
+  ElButton,
+  ElCard,
+  ElDialog,
+  ElDivider,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElMessage,
+  ElOption,
+  ElSelect,
+} from 'element-plus'
 import { fetchInventory, searchPickers, submitPicking, validatePicker } from '../mock/api'
 import { useBenchmarkStore } from '../stores/benchmark'
 import type { InventoryRow, PickLine, Picker, Query } from '../types/benchmark'

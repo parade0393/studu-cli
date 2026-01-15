@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElCard, ElTag, ElText } from 'element-plus'
 
 type TagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
 type GoalTag = { label: string; type: TagType }

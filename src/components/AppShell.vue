@@ -29,6 +29,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElContainer, ElHeader, ElLink, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import ComparePanel from './ComparePanel.vue'
 import PageGoals from './PageGoals.vue'
 

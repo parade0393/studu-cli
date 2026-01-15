@@ -93,7 +93,24 @@
 
 <script setup lang="ts">
 import { computed, h, reactive, ref, type FunctionalComponent } from 'vue'
-import { ElMessage } from 'element-plus'
+import {
+  ElAlert,
+  ElButton,
+  ElCard,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElDivider,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElOption,
+  ElPagination,
+  ElSelect,
+  ElTimeline,
+  ElTimelineItem,
+} from 'element-plus'
 import { exceptionAction, fetchExceptionTimeline, fetchExceptions } from '../mock/api'
 import { useBenchmarkStore } from '../stores/benchmark'
 import type { ExceptionRow, FilterRule, Query } from '../types/benchmark'

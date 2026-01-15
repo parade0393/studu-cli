@@ -58,7 +58,16 @@
 
 <script setup lang="ts">
 import { computed, h, ref, type ComponentPublicInstance } from 'vue'
-import { ElMessage } from 'element-plus'
+import {
+  ElButton,
+  ElCard,
+  ElCheckbox,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElEmpty,
+  ElMessage,
+  ElText,
+} from 'element-plus'
 import { fetchTreeChildren, fetchTreeRoots } from '../mock/api'
 import { useBenchmarkStore } from '../stores/benchmark'
 import type { TreeNode } from '../types/benchmark'

@@ -1,7 +1,11 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
+
+// Element Plus 基础样式（组件按需导入）
 import 'element-plus/dist/index.css'
+// Ant Design Vue 基础样式（组件按需导入）
+import 'ant-design-vue/dist/reset.css'
+
 import './styles/table.css'
 
 import App from './App.vue'
@@ -24,6 +28,5 @@ window.addEventListener('error', (e) => {
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)
 
 app.mount('#app')

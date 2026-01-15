@@ -103,6 +103,18 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import {
+  ElAlert,
+  ElButton,
+  ElCard,
+  ElDatePicker,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElOption,
+  ElSelect,
+} from 'element-plus'
 import { fetchInventory } from '../mock/api'
 import { getInventoryColumns } from '../columns/inventory'
 import type { FilterRule, InventoryRow, Query } from '../types/benchmark'
