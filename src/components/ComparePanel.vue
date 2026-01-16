@@ -7,6 +7,7 @@
             <el-select v-model="store.libraryMode" style="width: 180px">
               <el-option label="Element Plus: Table" value="el-table" />
               <el-option label="Element Plus: Table V2 (Virtualized)" value="el-table-v2" />
+              <el-option label="Ant Design Vue: Table" value="ant-table" />
             </el-select>
           </el-form-item>
 

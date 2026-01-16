@@ -156,7 +156,10 @@ const modeHint = computed(() => {
     return 'Element Plus Table 不提供行虚拟滚动（此 Demo 固定全量渲染）；切换到 Table V2 可观察虚拟滚动表现。'
   }
   if (store.libraryMode === 'el-table-v2' && store.toggles.merge) {
-    return 'Element Plus Table V2 不支持单元格合并（merge）。'
+    return 'Element Plus Table V2 虽然支持合并，但是实现起来有很多坑，比如复杂的单元格合并，合并时的hover效果好像都不太好处理。'
+  }
+  if (store.libraryMode === 'ant-table' && store.toggles.rowVirtual) {
+    return 'Ant Design Vue Table 原生不支持虚拟滚动。'
   }
   return null
 })
