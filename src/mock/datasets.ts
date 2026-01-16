@@ -61,11 +61,17 @@ export function getInventoryRows(size: number, seed: number, columnSize: number)
   const rows: InventoryRow[] = []
 
   const skuCount = 1000
-  for (let i = 0; i < size; i++) {
+  const groupCount = Math.max(1, Math.floor(size / 3))
+  const groups = Array.from({ length: groupCount }, () => {
     const skuIndex = randInt(rng, 1, skuCount)
     const sku = `SKU${pad(skuIndex, 6)}`
     const skuName = `商品-${pad(skuIndex, 4)}-${pickOne(rng, ['标准', '加固', '轻量', '组合', '冷链'])}`
     const batch = `BATCH-${toIso(new Date()).slice(0, 10).replace(/-/g, '')}-${pad(randInt(rng, 1, 5), 2)}`
+    return { sku, skuName, batch }
+  })
+
+  function pushRow(group: { sku: string; skuName: string; batch: string }) {
+    const i = rows.length
     const warehouse = pickOne(rng, warehouses)
     const zone = pickOne(rng, zones)
     const bin = `B${pad(randInt(rng, 1, 80), 4)}`
@@ -89,9 +95,9 @@ export function getInventoryRows(size: number, seed: number, columnSize: number)
       warehouse,
       zone,
       bin,
-      sku,
-      skuName,
-      batch,
+      sku: group.sku,
+      skuName: group.skuName,
+      batch: group.batch,
       owner: pickOne(rng, owners),
       supplier: pickOne(rng, suppliers),
       qualityStatus,
@@ -126,6 +132,18 @@ export function getInventoryRows(size: number, seed: number, columnSize: number)
     }
 
     rows.push(row)
+  }
+
+  for (const group of groups) {
+    const groupSize = randInt(rng, 2, 5)
+    for (let k = 0; k < groupSize && rows.length < size; k++) {
+      pushRow(group)
+    }
+    if (rows.length >= size) break
+  }
+
+  while (rows.length < size) {
+    pushRow(pickOne(rng, groups))
   }
 
   rows.sort((a, b) => (a.sku + a.batch).localeCompare(b.sku + b.batch))
