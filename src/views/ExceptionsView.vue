@@ -150,6 +150,8 @@ const modeHint = computed(() => {
     return 'Table V2：此页重点对比"固定列 + 高频操作 + Drawer"。'
   if (store.libraryMode === 'ant-table')
     return 'Ant Design Vue Table：此页对比"固定列 + 高频操作 + Drawer"表现。'
+  if (store.libraryMode === 'tanstack-table')
+    return 'TanStack Table：headless 适配版，仅提供基础表格能力。'
   return null
 })
 

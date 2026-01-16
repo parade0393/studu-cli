@@ -25,6 +25,8 @@
     }
   },
   "dependencies": {
+    "@tanstack/vue-table": "^8.21.2",
+    "@tanstack/vue-virtual": "^3.13.18",
     "ant-design-vue": "~4.2.6",
     "element-plus": "^2.13.0",
     "pinia": "^3.0.4",

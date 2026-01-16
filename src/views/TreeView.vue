@@ -21,6 +21,7 @@
     <div class="body">
       <el-card class="left" shadow="never">
         <component
+          v-if="adapter.TreeTable"
           :is="adapter.TreeTable"
           ref="treeRef"
           :roots="roots"
@@ -34,6 +35,7 @@
           :on-row-click="onRowClick"
           empty-text="暂无数据"
         />
+        <el-empty v-else description="当前表格方案未提供树表适配" />
       </el-card>
 
       <el-card class="right" shadow="never">

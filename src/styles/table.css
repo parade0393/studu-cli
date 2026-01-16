@@ -174,6 +174,105 @@
   border-color: var(--tb-border-color);
 }
 
+/* ---------- TanStack Table (Headless) ---------- */
+.tb-skin .tb-table-shell {
+  position: relative;
+}
+
+.tb-skin .tb-table-scroll {
+  overflow: auto;
+}
+
+.tb-skin .tb-table--tanstack {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--tb-font-size);
+  table-layout: fixed;
+}
+
+.tb-skin .tb-table--tanstack thead th {
+  font-size: var(--tb-header-font-size);
+  font-weight: 600;
+  color: var(--tb-header-text);
+  background: var(--tb-header-bg);
+  height: var(--tb-header-height);
+  padding: 0 var(--tb-cell-padding-x);
+  border-bottom: 1px solid var(--tb-border-color);
+  border-right: 1px solid var(--tb-border-color);
+  text-align: left;
+}
+
+.tb-skin .tb-table--tanstack thead th:last-child {
+  border-right: 0;
+}
+
+.tb-skin .tb-table--tanstack tbody td {
+  color: var(--tb-text);
+  padding: var(--tb-cell-padding-y) var(--tb-cell-padding-x);
+  border-bottom: 1px solid var(--tb-border-color);
+  border-right: 1px solid var(--tb-border-color);
+  height: var(--tb-row-height);
+  background: var(--tb-bg);
+}
+
+.tb-skin .tb-table--tanstack .tb-row--selected > td {
+  background: var(--tb-row-selected-bg);
+}
+
+.tb-skin .tb-table--tanstack tbody td:last-child {
+  border-right: 0;
+}
+
+.tb-skin .tb-table--tanstack tbody tr:hover > td {
+  background: var(--tb-row-hover-bg);
+}
+
+.tb-skin .tb-table--tanstack .tb-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-skin .tb-table--tanstack .tb-th--sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.tb-skin .tb-table--tanstack .tb-sort {
+  font-size: 11px;
+  color: var(--tb-header-text);
+}
+
+.tb-skin .tb-table--tanstack .tb-sticky {
+  position: sticky;
+  background: var(--tb-bg);
+  z-index: 2;
+}
+
+.tb-skin .tb-table--tanstack thead .tb-sticky {
+  background: var(--tb-header-bg);
+  z-index: 4;
+}
+
+.tb-skin .tb-table--tanstack .tb-sticky--left {
+  box-shadow: 1px 0 0 var(--tb-border-color);
+}
+
+.tb-skin .tb-table--tanstack .tb-sticky--right {
+  box-shadow: -1px 0 0 var(--tb-border-color);
+}
+
+.tb-skin .tb-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--tb-bg) 70%, transparent);
+  color: var(--tb-text-secondary);
+  font-size: 12px;
+}
+
 /* Empty overlay (shared) */
 .tb-empty {
   position: absolute;

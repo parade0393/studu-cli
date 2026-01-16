@@ -159,7 +159,16 @@ const modeHint = computed(() => {
     return 'Element Plus Table V2 虽然支持合并，但是实现起来有很多坑，比如复杂的单元格合并，合并时的hover效果好像都不太好处理。'
   }
   if (store.libraryMode === 'ant-table' && store.toggles.rowVirtual) {
-    return 'Ant Design Vue Table 原生不支持虚拟滚动。'
+    return 'Ant Design Vue Table 原生不支持虚拟滚动（没有 virtual 属性）；rc-virtual-list 是 React 组件，需改用分页或自定义虚拟滚动方案。'
+  }
+  if (store.libraryMode === 'ant-table' && store.toggles.merge) {
+    return 'Ant Design Vue Table 已通过 customCell + rowSpan/colSpan 实现单元格合并。'
+  }
+  if (store.libraryMode === 'tanstack-table' && store.toggles.rowVirtual) {
+    return 'TanStack Table 已接入 @tanstack/virtual，实现行虚拟滚动。'
+  }
+  if (store.libraryMode === 'tanstack-table' && store.toggles.merge) {
+    return 'TanStack Table 已通过 spanMethod + rowSpan/colSpan 实现单元格合并。'
   }
   return null
 })
