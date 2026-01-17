@@ -284,3 +284,44 @@
   color: var(--tb-text-secondary);
   background: var(--tb-bg);
 }
+
+/* ---------- AG Grid (Community) ---------- */
+.tb-skin.ag-theme-quartz {
+  --ag-font-size: var(--tb-font-size);
+  --ag-header-font-size: var(--tb-header-font-size);
+  --ag-row-height: var(--tb-row-height);
+  --ag-header-height: var(--tb-header-height);
+  --ag-foreground-color: var(--tb-text);
+  --ag-secondary-foreground-color: var(--tb-text-secondary);
+  --ag-background-color: var(--tb-bg);
+  --ag-header-background-color: var(--tb-header-bg);
+  --ag-header-foreground-color: var(--tb-header-text);
+  --ag-border-color: var(--tb-border-color);
+  --ag-row-hover-color: var(--tb-row-hover-bg);
+  --ag-selected-row-background-color: var(--tb-row-selected-bg);
+}
+
+.tb-skin.ag-theme-quartz .ag-root-wrapper {
+  border: 0;
+  background: var(--tb-bg);
+}
+
+.tb-skin.ag-theme-quartz .ag-header-cell-label {
+  font-weight: 600;
+}
+
+/* ---------- VXE Table ---------- */
+.tb-skin .vxe-table {
+  font-size: var(--tb-font-size);
+  color: var(--tb-text);
+}
+
+.tb-skin .vxe-header--row .vxe-cell {
+  font-size: var(--tb-header-font-size);
+  font-weight: 600;
+  color: var(--tb-header-text);
+}
+
+.tb-skin .vxe-body--row .vxe-cell {
+  color: var(--tb-text);
+}

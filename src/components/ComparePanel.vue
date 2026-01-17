@@ -9,6 +9,8 @@
               <el-option label="Element Plus: Table V2 (Virtualized)" value="el-table-v2" />
               <el-option label="Ant Design Vue: Table" value="ant-table" />
               <el-option label="TanStack Table (Headless)" value="tanstack-table" />
+              <el-option label="AG Grid: Community" value="ag-grid" />
+              <el-option label="VXE Table" value="vxe-table" />
             </el-select>
           </el-form-item>
 

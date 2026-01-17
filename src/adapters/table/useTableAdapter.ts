@@ -5,6 +5,8 @@ import { useBenchmarkStore } from '../../stores/benchmark'
 import { elementPlusTableAdapter, elementPlusTableV2Adapter } from '../element-plus'
 import { antDesignVueTableAdapter } from '../ant-design-vue'
 import { tanstackTableAdapter } from '../tanstack-table'
+import { agGridTableAdapter } from '../ag-grid'
+import { vxeTableAdapter } from '../vxe-table'
 
 export function useTableAdapter(): ComputedRef<TableAdapter> {
   const store = useBenchmarkStore()
@@ -16,6 +18,10 @@ export function useTableAdapter(): ComputedRef<TableAdapter> {
         return antDesignVueTableAdapter
       case 'tanstack-table':
         return tanstackTableAdapter
+      case 'ag-grid':
+        return agGridTableAdapter
+      case 'vxe-table':
+        return vxeTableAdapter
       default:
         return elementPlusTableAdapter
     }

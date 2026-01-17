@@ -27,11 +27,14 @@
   "dependencies": {
     "@tanstack/vue-table": "^8.21.2",
     "@tanstack/vue-virtual": "^3.13.18",
+    "ag-grid-community": "^35.0.0",
+    "ag-grid-vue3": "^35.0.0",
     "ant-design-vue": "~4.2.6",
     "element-plus": "^2.13.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "vxe-table": "^4.17.42"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.3.0",

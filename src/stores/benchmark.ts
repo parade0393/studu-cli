@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 
-export type LibraryMode = 'el-table' | 'el-table-v2' | 'ant-table' | 'tanstack-table'
+export type LibraryMode =
+  | 'el-table'
+  | 'el-table-v2'
+  | 'ant-table'
+  | 'tanstack-table'
+  | 'ag-grid'
+  | 'vxe-table'
 export type DataMode = 'local' | 'server'
 export type DataSize = 100 | 1000 | 10000 | 100000
 export type ColumnSize = 30 | 60 | 120

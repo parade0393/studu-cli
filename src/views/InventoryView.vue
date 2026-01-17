@@ -153,13 +153,13 @@ const selectedRowKeys = ref<string[]>([])
 
 const modeHint = computed(() => {
   if (store.libraryMode === 'el-table' && store.toggles.rowVirtual) {
-    return 'Element Plus Table 不提供行虚拟滚动（此 Demo 固定全量渲染）；切换到 Table V2 可观察虚拟滚动表现。'
+    return 'Element Plus Table 未提供可接管表体渲染的入口，无法直接接入 @tanstack/virtual；虚拟化请切换到官方 Table V2。'
   }
   if (store.libraryMode === 'el-table-v2' && store.toggles.merge) {
     return 'Element Plus Table V2 虽然支持合并，但是实现起来有很多坑，比如复杂的单元格合并，合并时的hover效果好像都不太好处理。'
   }
   if (store.libraryMode === 'ant-table' && store.toggles.rowVirtual) {
-    return 'Ant Design Vue Table 原生不支持虚拟滚动（没有 virtual 属性）；rc-virtual-list 是 React 组件，需改用分页或自定义虚拟滚动方案。'
+    return 'Ant Design Vue Table 文档未提供可替换 body/row 的渲染入口，难以接入 @tanstack/virtual；需分页或自建虚拟表格壳。'
   }
   if (store.libraryMode === 'ant-table' && store.toggles.merge) {
     return 'Ant Design Vue Table 已通过 customCell + rowSpan/colSpan 实现单元格合并。'
@@ -169,6 +169,9 @@ const modeHint = computed(() => {
   }
   if (store.libraryMode === 'tanstack-table' && store.toggles.merge) {
     return 'TanStack Table 已通过 spanMethod + rowSpan/colSpan 实现单元格合并。'
+  }
+  if (store.libraryMode === 'ag-grid' && store.toggles.rowVirtual) {
+    return 'AG Grid Community 内置行虚拟化（窗口渲染），无需额外接入虚拟库。'
   }
   return null
 })
