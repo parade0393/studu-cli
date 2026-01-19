@@ -29,12 +29,14 @@ function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>) {
 
 function renderColumn(col: TableColumnDef<Row>, treeNode: boolean) {
   const Header = col.headerCell
+  const useFixedWidth = Boolean(col.fixed)
   return (
     <VxeColumn
       key={col.key}
       field={col.key}
       title={col.title}
-      width={col.width}
+      width={useFixedWidth ? col.width : undefined}
+      minWidth={!useFixedWidth ? col.width : undefined}
       fixed={col.fixed}
       align={col.align}
       treeNode={treeNode ? true : undefined}
@@ -155,6 +157,18 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
       if (!tableRef.value) return
       await tableRef.value.clearTreeExpand()
 
+      const expandBatch = async (rows: Row[]) => {
+        const table = tableRef.value
+        if (!table) return
+        const batchSize = 6
+        for (let i = 0; i < rows.length; i += batchSize) {
+          if (token !== expandToken.value) return
+          const batch = rows.slice(i, i + batchSize)
+          await Promise.all(batch.map((row) => table.setTreeExpand(row, true)))
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+        }
+      }
+
       const collectAtDepth = (rows: Row[], depth: number, out: Row[]) => {
         for (const row of rows) {
           if (depth === 0) {
@@ -170,14 +184,10 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
         if (token !== expandToken.value) return
         const rowsAtDepth: Row[] = []
         collectAtDepth(roots.value, depth, rowsAtDepth)
-        for (const row of rowsAtDepth) {
-          if (token !== expandToken.value) return
-          const hasChildren = Boolean(
-            (row as TreeRow).hasChildren || (row as TreeRow).children?.length,
-          )
-          if (!hasChildren) continue
-          await tableRef.value.setTreeExpand(row, true)
-        }
+        const expandableRows = rowsAtDepth.filter((row) =>
+          Boolean((row as TreeRow).hasChildren || (row as TreeRow).children?.length),
+        )
+        await expandBatch(expandableRows)
       }
     }
 
@@ -197,6 +207,7 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
             ref={tableRef}
             data={roots.value}
             height={tableHeight.value}
+            fit
             border={props.border ? 'inner' : false}
             loading={props.loading}
             scrollY={{ enabled: true, gt: 50 }}

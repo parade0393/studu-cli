@@ -27,12 +27,14 @@ function renderCell<RowType>(row: RowType, rowIndex: number, col: TableColumnDef
 
 function renderColumn<RowType>(col: TableColumnDef<RowType>) {
   const Header = col.headerCell
+  const useFixedWidth = Boolean(col.fixed)
   return (
     <VxeColumn
       key={col.key}
       field={col.key}
       title={col.title}
-      width={col.width}
+      width={useFixedWidth ? col.width : undefined}
+      minWidth={!useFixedWidth ? col.width : undefined}
       fixed={col.fixed}
       align={col.align}
       sortable={col.sortable}
@@ -180,6 +182,7 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
             ref={tableRef}
             data={props.rows as Row[]}
             height={tableHeight.value}
+            fit
             border={props.border ? 'inner' : false}
             loading={props.loading}
             scrollY={{ enabled: true, gt: 50 }}
