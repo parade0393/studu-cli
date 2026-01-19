@@ -1,13 +1,14 @@
 import type { TableAdapter } from '../table/types'
 import { VxeDataTable } from './VxeDataTable'
+import { VxeTreeTable } from './VxeTreeTable'
 
 export const vxeTableAdapter: TableAdapter = {
   DataTable: VxeDataTable,
-  TreeTable: null,
+  TreeTable: VxeTreeTable,
   capabilities: {
     groupedHeader: true,
     mergeCells: true,
-    treeLazy: false,
+    treeLazy: true,
     selection: true,
     sort: true,
   },
