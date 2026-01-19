@@ -256,6 +256,28 @@
   color: var(--tb-header-text);
 }
 
+.tb-skin .tb-table--tanstack .tb-tree-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-skin .tb-table--tanstack .tb-tree-toggle,
+.tb-skin .tb-table--tanstack .tb-tree-toggle-spacer {
+  width: 12px;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.tb-skin .tb-table--tanstack .tb-tree-toggle {
+  cursor: pointer;
+}
+
+.tb-skin .tb-table--tanstack .tb-tree-loading {
+  color: var(--tb-text-secondary);
+  font-size: 12px;
+}
+
 .tb-skin .tb-table--tanstack .tb-sticky {
   position: sticky;
   background: var(--tb-bg);

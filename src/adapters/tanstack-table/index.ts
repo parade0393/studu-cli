@@ -1,13 +1,14 @@
 import type { TableAdapter } from '../table/types'
 import { TanstackDataTable } from './TanstackDataTable'
+import { TanstackTreeTable } from './TanstackTreeTable'
 
 export const tanstackTableAdapter: TableAdapter = {
   DataTable: TanstackDataTable,
-  TreeTable: null,
+  TreeTable: TanstackTreeTable,
   capabilities: {
     groupedHeader: true,
     mergeCells: true,
-    treeLazy: false,
+    treeLazy: true,
     selection: true,
     sort: true,
   },
