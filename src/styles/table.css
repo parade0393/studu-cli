@@ -191,6 +191,12 @@
   table-layout: fixed;
 }
 
+.tb-skin .tb-table--tanstack thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .tb-skin .tb-table--tanstack thead th {
   font-size: var(--tb-header-font-size);
   font-weight: 600;
@@ -205,6 +211,12 @@
 
 .tb-skin .tb-table--tanstack thead th:last-child {
   border-right: 0;
+}
+
+.tb-skin .tb-table--tanstack tbody {
+  margin: 0;
+  padding: 0;
+  border-spacing: 0;
 }
 
 .tb-skin .tb-table--tanstack tbody td {

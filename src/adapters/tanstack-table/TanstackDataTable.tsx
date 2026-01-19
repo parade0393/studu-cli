@@ -7,6 +7,7 @@ import {
   type SortingState,
 } from '@tanstack/vue-table'
 import { useVirtualizer } from '@tanstack/vue-virtual'
+import { useElementSize } from '@vueuse/core'
 import { computed, defineComponent, h, ref } from 'vue'
 import type {
   DataTableProps,
@@ -150,8 +151,12 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
     )
 
     const scrollRef = ref<HTMLElement | null>(null)
+    const theadRef = ref<HTMLElement | null>(null)
     const rowHeight = 44
-    const headerHeight = 40
+
+    // 动态获取表头高度，支持分组表头
+    const { height: theadHeight } = useElementSize(theadRef)
+
     const columnPinning = computed(() => {
       const defs = props.columns as TableColumnDef<Row>[]
       const groups = props.headerGroups as TableHeaderGroup<Row>[] | undefined
@@ -259,8 +264,9 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
         getScrollElement: () => scrollRef.value,
         estimateSize: () => rowHeight,
         overscan: 8,
-        paddingStart: headerHeight,
-        scrollPaddingStart: headerHeight,
+        // 不使用 paddingStart，因为 sticky header 不占据文档流空间
+        // scrollPaddingStart 用于滚动时的偏移计算
+        scrollPaddingStart: theadHeight.value || 0,
       })),
     )
 
@@ -320,7 +326,7 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
                   minWidth: '100%',
                 }}
               >
-                <thead>
+                <thead ref={theadRef}>
                   {table.getCenterHeaderGroups().map((group, index) => {
                     const leftGroup = table.getLeftHeaderGroups()[index]
                     const rightGroup = table.getRightHeaderGroups()[index]

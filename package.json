@@ -27,6 +27,7 @@
   "dependencies": {
     "@tanstack/vue-table": "^8.21.2",
     "@tanstack/vue-virtual": "^3.13.18",
+    "@vueuse/core": "^14.1.0",
     "ag-grid-community": "^35.0.0",
     "ag-grid-vue3": "^35.0.0",
     "ant-design-vue": "~4.2.6",
