@@ -3,6 +3,7 @@ import {
   getCoreRowModel,
   useVueTable,
   type ColumnDef,
+  type Header,
   type RowSelectionState,
   type SortingState,
 } from '@tanstack/vue-table'
@@ -26,6 +27,11 @@ type ColumnMeta = {
   columnKey?: string
   skipSpan?: boolean
   fixed?: 'left' | 'right'
+}
+
+type StickyPosition = {
+  side: 'left' | 'right'
+  offset: number
 }
 
 type Updater<T> = T | ((old: T) => T)
@@ -153,6 +159,7 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
     const scrollRef = ref<HTMLElement | null>(null)
     const theadRef = ref<HTMLElement | null>(null)
     const rowHeight = 44
+    const enableVirtual = computed(() => !props.spanMethod)
 
     // 动态获取表头高度，支持分组表头
     const { height: theadHeight } = useElementSize(theadRef)
@@ -270,13 +277,18 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
       })),
     )
 
-    const virtualRows = computed(() => rowVirtualizer.value.getVirtualItems())
-    const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
+    const virtualRows = computed(() =>
+      enableVirtual.value ? rowVirtualizer.value.getVirtualItems() : [],
+    )
+    const totalSize = computed(() => {
+      if (enableVirtual.value) return rowVirtualizer.value.getTotalSize()
+      return (props.rows as Row[]).length * rowHeight
+    })
 
     const stickyMap = computed(() => {
       const leftColumns = table.getLeftVisibleLeafColumns()
       const rightColumns = table.getRightVisibleLeafColumns()
-      const map = new Map<string, { side: 'left' | 'right'; offset: number }>()
+      const map = new Map<string, StickyPosition>()
       let offset = 0
       leftColumns.forEach((column) => {
         const meta = column.columnDef.meta as ColumnMeta | undefined
@@ -296,9 +308,35 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
       return map
     })
 
+    const resolveHeaderSticky = (header: Header<Row, unknown>) => {
+      const leafHeaders = header.getLeafHeaders?.() ?? []
+      if (!leafHeaders.length) return undefined
+
+      const stickyItems = leafHeaders
+        .map((leaf) => stickyMap.value.get(leaf.column.id))
+        .filter((item): item is StickyPosition => !!item)
+
+      if (!stickyItems.length) return undefined
+
+      const first = stickyItems[0]
+      if (!first) return undefined
+      const side = first.side
+      if (!stickyItems.every((item) => item.side === side)) return undefined
+
+      return {
+        side,
+        offset: Math.min(...stickyItems.map((item) => item.offset)),
+      }
+    }
+
+    const visibleLeafColumns = computed(() => [
+      ...table.getLeftVisibleLeafColumns(),
+      ...table.getCenterVisibleLeafColumns(),
+      ...table.getRightVisibleLeafColumns(),
+    ])
+
     const tableWidth = computed(() => {
-      const columns = table.getVisibleLeafColumns()
-      return columns.reduce((sum, column) => {
+      return visibleLeafColumns.value.reduce((sum, column) => {
         const meta = column.columnDef.meta as ColumnMeta | undefined
         const width = meta?.width ?? 120
         return sum + width
@@ -313,6 +351,72 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
       const data = props.rows as Row[]
       const empty = !data.length
       const rowModel = table.getRowModel().rows
+      const headerRowCount = table.getCenterHeaderGroups().length
+      const mergeHeaderIds = new Set(['_index', '_select'])
+
+      const renderCells = (row: (typeof rowModel)[number]) => {
+        const cells = [
+          ...row.getLeftVisibleCells(),
+          ...row.getCenterVisibleCells(),
+          ...row.getRightVisibleCells(),
+        ]
+
+        return cells.map((cell) => {
+          const meta = cell.column.columnDef.meta as ColumnMeta | undefined
+          const columnKey = meta?.columnKey ?? cell.column.id
+          const sticky = stickyMap.value.get(cell.column.id)
+          if (meta?.skipSpan) {
+            const width = meta?.width ? `${meta.width}px` : undefined
+            const align = meta?.align
+            return (
+              <td
+                key={cell.id}
+                style={{
+                  width,
+                  textAlign: align,
+                  position: sticky ? 'sticky' : undefined,
+                  left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
+                  right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
+                }}
+                class={sticky ? `tb-sticky tb-sticky--${sticky.side}` : undefined}
+              >
+                <FlexRender render={cell.column.columnDef.cell} props={cell.getContext()} />
+              </td>
+            )
+          }
+
+          const span = props.spanMethod
+            ? props.spanMethod({
+                row: row.original,
+                rowIndex: row.index,
+                columnKey,
+              })
+            : { rowspan: 1, colspan: 1 }
+
+          if (!span.rowspan || !span.colspan) return null
+
+          const width = meta?.width ? `${meta.width}px` : undefined
+          const align = meta?.align
+
+          return (
+            <td
+              key={cell.id}
+              rowspan={span.rowspan}
+              colspan={span.colspan}
+              style={{
+                width,
+                textAlign: align,
+                position: sticky ? 'sticky' : undefined,
+                left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
+                right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
+              }}
+              class={sticky ? `tb-sticky tb-sticky--${sticky.side}` : undefined}
+            >
+              <FlexRender render={cell.column.columnDef.cell} props={cell.getContext()} />
+            </td>
+          )
+        })
+      }
 
       return (
         <div class={['tb-skin', props.border ? 'tb-bordered' : null]}>
@@ -321,11 +425,18 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
               <table
                 class="tb-table tb-table--tanstack"
                 style={{
-                  height: `${totalSize.value}px`,
+                  height: enableVirtual.value ? `${totalSize.value}px` : undefined,
                   width: `${tableWidth.value}px`,
                   minWidth: '100%',
                 }}
               >
+                <colgroup>
+                  {visibleLeafColumns.value.map((column) => {
+                    const meta = column.columnDef.meta as ColumnMeta | undefined
+                    const width = meta?.width ?? 120
+                    return <col key={column.id} style={{ width: `${width}px` }} />
+                  })}
+                </colgroup>
                 <thead ref={theadRef}>
                   {table.getCenterHeaderGroups().map((group, index) => {
                     const leftGroup = table.getLeftHeaderGroups()[index]
@@ -339,25 +450,31 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
                           const align = meta?.align
                           const canSort = header.column.getCanSort()
                           const sort = header.column.getIsSorted()
-                          const sticky = stickyMap.value.get(header.column.id)
+                          const sticky = resolveHeaderSticky(header)
+                          const mergeHeader =
+                            headerRowCount > 1 && mergeHeaderIds.has(header.column.id)
+                          if (mergeHeader && index > 0) return null
+                          const rowSpan = mergeHeader ? headerRowCount : undefined
 
                           return (
                             <th
                               key={header.id}
                               colspan={header.colSpan}
+                              rowspan={rowSpan}
                               style={{
                                 width,
                                 textAlign: align,
                                 position: sticky ? 'sticky' : undefined,
                                 left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
                                 right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
+                                verticalAlign: mergeHeader ? 'middle' : undefined,
                               }}
                               class={[
                                 sticky ? `tb-sticky tb-sticky--${sticky.side}` : null,
                                 canSort ? 'tb-sortable' : null,
                               ]}
                             >
-                              {header.isPlaceholder ? null : (
+                              {header.isPlaceholder && !mergeHeader ? null : (
                                 <div
                                   class={['tb-th', canSort ? 'tb-th--sortable' : null]}
                                   onClick={
@@ -382,25 +499,31 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
                           const align = meta?.align
                           const canSort = header.column.getCanSort()
                           const sort = header.column.getIsSorted()
-                          const sticky = stickyMap.value.get(header.column.id)
+                          const sticky = resolveHeaderSticky(header)
+                          const mergeHeader =
+                            headerRowCount > 1 && mergeHeaderIds.has(header.column.id)
+                          if (mergeHeader && index > 0) return null
+                          const rowSpan = mergeHeader ? headerRowCount : undefined
 
                           return (
                             <th
                               key={header.id}
                               colspan={header.colSpan}
+                              rowspan={rowSpan}
                               style={{
                                 width,
                                 textAlign: align,
                                 position: sticky ? 'sticky' : undefined,
                                 left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
                                 right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
+                                verticalAlign: mergeHeader ? 'middle' : undefined,
                               }}
                               class={[
                                 sticky ? `tb-sticky tb-sticky--${sticky.side}` : null,
                                 canSort ? 'tb-sortable' : null,
                               ]}
                             >
-                              {header.isPlaceholder ? null : (
+                              {header.isPlaceholder && !mergeHeader ? null : (
                                 <div
                                   class={['tb-th', canSort ? 'tb-th--sortable' : null]}
                                   onClick={
@@ -425,25 +548,31 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
                           const align = meta?.align
                           const canSort = header.column.getCanSort()
                           const sort = header.column.getIsSorted()
-                          const sticky = stickyMap.value.get(header.column.id)
+                          const sticky = resolveHeaderSticky(header)
+                          const mergeHeader =
+                            headerRowCount > 1 && mergeHeaderIds.has(header.column.id)
+                          if (mergeHeader && index > 0) return null
+                          const rowSpan = mergeHeader ? headerRowCount : undefined
 
                           return (
                             <th
                               key={header.id}
                               colspan={header.colSpan}
+                              rowspan={rowSpan}
                               style={{
                                 width,
                                 textAlign: align,
                                 position: sticky ? 'sticky' : undefined,
                                 left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
                                 right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
+                                verticalAlign: mergeHeader ? 'middle' : undefined,
                               }}
                               class={[
                                 sticky ? `tb-sticky tb-sticky--${sticky.side}` : null,
                                 canSort ? 'tb-sortable' : null,
                               ]}
                             >
-                              {header.isPlaceholder ? null : (
+                              {header.isPlaceholder && !mergeHeader ? null : (
                                 <div
                                   class={['tb-th', canSort ? 'tb-th--sortable' : null]}
                                   onClick={
@@ -467,95 +596,37 @@ export const TanstackDataTable = defineComponent<DataTableProps<Row>>({
                   })}
                 </thead>
 
-                <tbody style={{ position: 'relative' }}>
-                  {virtualRows.value.map((virtualRow) => {
-                    const row = rowModel[virtualRow.index]
-                    if (!row) return null
+                <tbody style={enableVirtual.value ? { position: 'relative' } : undefined}>
+                  {enableVirtual.value
+                    ? virtualRows.value.map((virtualRow) => {
+                        const row = rowModel[virtualRow.index]
+                        if (!row) return null
 
-                    const cells = [
-                      ...row.getLeftVisibleCells(),
-                      ...row.getCenterVisibleCells(),
-                      ...row.getRightVisibleCells(),
-                    ]
-
-                    return (
-                      <tr
-                        key={row.id}
-                        class={row.getIsSelected() ? 'tb-row--selected' : undefined}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        {cells.map((cell) => {
-                          const meta = cell.column.columnDef.meta as ColumnMeta | undefined
-                          const columnKey = meta?.columnKey ?? cell.column.id
-                          const sticky = stickyMap.value.get(cell.column.id)
-                          if (meta?.skipSpan) {
-                            const width = meta?.width ? `${meta.width}px` : undefined
-                            const align = meta?.align
-                            return (
-                              <td
-                                key={cell.id}
-                                style={{
-                                  width,
-                                  textAlign: align,
-                                  position: sticky ? 'sticky' : undefined,
-                                  left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
-                                  right:
-                                    sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
-                                }}
-                                class={sticky ? `tb-sticky tb-sticky--${sticky.side}` : undefined}
-                              >
-                                <FlexRender
-                                  render={cell.column.columnDef.cell}
-                                  props={cell.getContext()}
-                                />
-                              </td>
-                            )
-                          }
-
-                          const span = props.spanMethod
-                            ? props.spanMethod({
-                                row: row.original,
-                                rowIndex: row.index,
-                                columnKey,
-                              })
-                            : { rowspan: 1, colspan: 1 }
-
-                          if (!span.rowspan || !span.colspan) return null
-
-                          const width = meta?.width ? `${meta.width}px` : undefined
-                          const align = meta?.align
-
-                          return (
-                            <td
-                              key={cell.id}
-                              rowspan={span.rowspan}
-                              colspan={span.colspan}
-                              style={{
-                                width,
-                                textAlign: align,
-                                position: sticky ? 'sticky' : undefined,
-                                left: sticky?.side === 'left' ? `${sticky.offset}px` : undefined,
-                                right: sticky?.side === 'right' ? `${sticky.offset}px` : undefined,
-                              }}
-                              class={sticky ? `tb-sticky tb-sticky--${sticky.side}` : undefined}
-                            >
-                              <FlexRender
-                                render={cell.column.columnDef.cell}
-                                props={cell.getContext()}
-                              />
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    )
-                  })}
+                        return (
+                          <tr
+                            key={row.id}
+                            class={row.getIsSelected() ? 'tb-row--selected' : undefined}
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: `${virtualRow.size}px`,
+                              transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                          >
+                            {renderCells(row)}
+                          </tr>
+                        )
+                      })
+                    : rowModel.map((row) => (
+                        <tr
+                          key={row.id}
+                          class={row.getIsSelected() ? 'tb-row--selected' : undefined}
+                        >
+                          {renderCells(row)}
+                        </tr>
+                      ))}
                 </tbody>
               </table>
               {empty ? <div class="tb-empty">{props.emptyText ?? '暂无数据'}</div> : null}
