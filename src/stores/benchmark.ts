@@ -69,7 +69,7 @@ export const useBenchmarkStore = defineStore('benchmark', {
   state: (): BenchmarkState => ({
     libraryMode: 'el-table-v2' as LibraryMode,
     dataMode: 'local' as DataMode,
-    dataSize: 10000 as DataSize,
+    dataSize: 100 as DataSize,
     columnSize: 30 as ColumnSize,
     seed: DEFAULT_SEED,
     toggles: { ...defaultToggles } as BenchmarkToggles,
