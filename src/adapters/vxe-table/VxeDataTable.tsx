@@ -182,11 +182,10 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
             ref={tableRef}
             data={props.rows as Row[]}
             height={tableHeight.value}
-            fit
             border={props.border ? 'inner' : false}
             loading={props.loading}
-            scrollY={{ enabled: true, gt: 50 }}
-            scrollX={{ enabled: true, gt: 20 }}
+            virtualYConfig={{ enabled: true, gt: 50 }}
+            virtualXConfig={{ enabled: true, gt: 20 }}
             rowConfig={rowConfig.value}
             columnConfig={{ resizable: false }}
             showOverflow
@@ -197,6 +196,7 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
             onSortChange={onSortChange}
             onCheckboxChange={emitSelection}
             onCheckboxAll={emitSelection}
+            stripe={true}
           >
             <VxeColumn type="seq" width={50} fixed="left" />
             {selectionEnabled.value ? <VxeColumn type="checkbox" width={50} fixed="left" /> : null}

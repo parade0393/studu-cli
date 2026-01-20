@@ -207,11 +207,10 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
             ref={tableRef}
             data={roots.value}
             height={tableHeight.value}
-            fit
             border={props.border ? 'inner' : false}
             loading={props.loading}
-            scrollY={{ enabled: true, gt: 50 }}
-            scrollX={{ enabled: true, gt: 20 }}
+            virtualYConfig={{ enabled: true, gt: 50 }}
+            virtualXConfig={{ enabled: true, gt: 20 }}
             rowConfig={rowConfig.value}
             treeConfig={treeConfig.value}
             columnConfig={{ resizable: false }}
