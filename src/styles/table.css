@@ -320,7 +320,7 @@
 }
 
 /* ---------- AG Grid (Community) ---------- */
-.tb-skin.ag-theme-quartz {
+:root .tb-skin.ag-theme-quartz {
   --ag-font-size: var(--tb-font-size);
   --ag-header-font-size: var(--tb-header-font-size);
   --ag-row-height: var(--tb-row-height);
@@ -333,6 +333,10 @@
   --ag-border-color: var(--tb-border-color);
   --ag-row-hover-color: var(--tb-row-hover-bg);
   --ag-selected-row-background-color: var(--tb-row-selected-bg);
+}
+
+.tb-skin.ag-theme-quartz .ag-row-hover:not(.ag-full-width-row)::before {
+  --ag-row-hover-color: var(--tb-row-hover-bg);
 }
 
 .tb-skin.ag-theme-quartz .ag-root-wrapper {
