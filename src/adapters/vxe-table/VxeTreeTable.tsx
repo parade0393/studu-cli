@@ -94,7 +94,9 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
     const selectionEnabled = computed(() => !!props.selection && !!props.onUpdateSelectedRowKeys)
 
     const rowConfig = computed(() =>
-      rowKeyField.value ? { useKey: true, keyField: rowKeyField.value } : undefined,
+      rowKeyField.value
+        ? { useKey: true, keyField: rowKeyField.value, isHover: true }
+        : { isHover: true },
     )
 
     const roots = computed(() =>
