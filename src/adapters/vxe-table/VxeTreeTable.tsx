@@ -1,8 +1,14 @@
-import { VxeColumn, VxeTable } from 'vxe-table'
-import type { VxeTableDefines, VxeTableInstance, VxeTablePropTypes } from 'vxe-table'
+import { VxeGrid } from 'vxe-table'
+import type {
+  VxeGridInstance,
+  VxeGridPropTypes,
+  VxeTableDefines,
+  VxeTablePropTypes,
+} from 'vxe-table'
 import { computed, defineComponent, ref, watch } from 'vue'
 import type { TableColumnDef, TreeTableHandle, TreeTableProps } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/utils'
+import { useBenchmarkStore } from '../../stores/benchmark'
 
 type Row = Record<string, unknown>
 
@@ -27,27 +33,32 @@ function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>) {
   }
 }
 
-function renderColumn(col: TableColumnDef<Row>, treeNode: boolean) {
+type GridColumn<RowType> = VxeGridPropTypes.Column<RowType>
+
+function renderColumn(
+  col: TableColumnDef<Row>,
+  treeNode: boolean,
+  allowFixed: boolean,
+): GridColumn<Row> {
   const Header = col.headerCell
-  const useFixedWidth = Boolean(col.fixed)
-  return (
-    <VxeColumn
-      key={col.key}
-      field={col.key}
-      title={col.title}
-      width={useFixedWidth ? col.width : undefined}
-      minWidth={!useFixedWidth ? col.width : undefined}
-      fixed={col.fixed}
-      align={col.align}
-      treeNode={treeNode ? true : undefined}
-      showOverflow
-      v-slots={{
-        default: ({ row, rowIndex }: { row: Row; rowIndex: number }) =>
-          renderCell(row, rowIndex, col),
-        header: Header ? () => <Header /> : undefined,
-      }}
-    />
-  )
+  const fixed = allowFixed ? col.fixed : undefined
+  const useFixedWidth = Boolean(fixed)
+  const slots = {
+    default: ({ row, rowIndex }: { row: Row; rowIndex: number }) => renderCell(row, rowIndex, col),
+    header: Header ? () => <Header /> : undefined,
+  }
+
+  return {
+    field: col.key,
+    title: col.title,
+    width: useFixedWidth ? col.width : undefined,
+    minWidth: !useFixedWidth ? col.width : undefined,
+    fixed,
+    align: col.align,
+    treeNode: treeNode ? true : undefined,
+    showOverflow: true,
+    slots,
+  }
 }
 
 function flattenRows(rows: Row[], out: Row[]) {
@@ -76,9 +87,10 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
     emptyText: { type: String, required: false },
   },
   setup(props, { expose }) {
-    const tableRef = ref<VxeTableInstance<Row> | null>(null)
+    const tableRef = ref<VxeGridInstance<Row> | null>(null)
     const syncingSelection = ref(false)
     const expandToken = ref(0)
+    const store = useBenchmarkStore()
 
     const rowKeyField = computed(() => (typeof props.rowKey === 'string' ? props.rowKey : null))
     const rowKeyFn = (row: Row) => getRowKey(props.rowKey, row)
@@ -202,17 +214,26 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
 
     return () => {
       const defs = props.columns as TableColumnDef<Row>[]
+      const gridColumns: GridColumn<Row>[] = []
+      const allowFixed = store.toggles.fixedCols
+      if (selectionEnabled.value) {
+        gridColumns.push({ type: 'checkbox', width: 50, fixed: allowFixed ? 'left' : undefined })
+      }
+      gridColumns.push(...defs.map((col, index) => renderColumn(col, index === 0, allowFixed)))
+      const enableVirtualY = store.toggles.rowVirtual
+      const enableVirtualX = store.toggles.colVirtual
 
       return (
         <div class="tb-skin" style={{ height: heightStyle.value }}>
-          <VxeTable
+          <VxeGrid
             ref={tableRef}
             data={roots.value}
+            columns={gridColumns}
             height={tableHeight.value}
             border={props.border ? 'full' : false}
             loading={props.loading}
-            virtualYConfig={{ enabled: true, gt: 50 }}
-            virtualXConfig={{ enabled: true, gt: 20 }}
+            virtualYConfig={enableVirtualY ? { enabled: true, gt: 50 } : { enabled: false }}
+            virtualXConfig={enableVirtualX ? { enabled: true, gt: 20 } : { enabled: false }}
             rowConfig={rowConfig.value}
             treeConfig={treeConfig.value}
             columnConfig={{ resizable: false }}
@@ -222,10 +243,7 @@ export const VxeTreeTable = defineComponent<TreeTableProps<Row>>({
             onCheckboxChange={emitSelection}
             onCheckboxAll={emitSelection}
             onCellClick={props.onRowClick ? onCellClick : undefined}
-          >
-            {selectionEnabled.value ? <VxeColumn type="checkbox" width={50} fixed="left" /> : null}
-            {defs.map((col, index) => renderColumn(col, index === 0))}
-          </VxeTable>
+          />
         </div>
       )
     }

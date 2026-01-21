@@ -86,6 +86,50 @@ function buildColDef(
   sortState: { key: string; order: 'asc' | 'desc' } | null,
 ): ColDef<Row> {
   const Header = col.headerCell
+  const filter = col.filter
+  const filterProps: Partial<ColDef<Row>> = {}
+
+  if (filter?.type === 'text') {
+    filterProps.filter = 'agTextColumnFilter'
+    filterProps.floatingFilter = true
+  }
+
+  if (filter?.type === 'select') {
+    filterProps.filter = 'agSetColumnFilter'
+    filterProps.filterParams = {
+      values: filter.options.map((option) => option.value),
+    }
+    filterProps.floatingFilter = true
+  }
+
+  if (filter?.type === 'date') {
+    filterProps.filter = 'agDateColumnFilter'
+    filterProps.filterParams = {
+      comparator: (filterDate: Date, cellValue: string) => {
+        const raw = cellValue ?? ''
+        const time = raw ? Date.parse(String(raw).replace(' ', 'T')) : NaN
+        if (Number.isNaN(time)) return -1
+        const cellDate = new Date(time)
+        if (cellDate < filterDate) return -1
+        if (cellDate > filterDate) return 1
+        return 0
+      },
+    }
+    filterProps.filterValueGetter = (params) =>
+      (params.data as Record<string, unknown> | undefined)?.[col.key] ?? null
+    filterProps.floatingFilter = true
+  }
+
+  if (filter?.type === 'custom' && filter.key === 'riskMin') {
+    filterProps.filter = 'agNumberColumnFilter'
+    filterProps.filterParams = {
+      filterOptions: ['greaterThanOrEqual'],
+      defaultOption: 'greaterThanOrEqual',
+      buttons: ['apply', 'reset'],
+    }
+    filterProps.floatingFilter = true
+  }
+
   return {
     colId: col.key,
     field: col.key,
@@ -99,6 +143,7 @@ function buildColDef(
     cellRendererParams: col.cell ? { cell: col.cell } : undefined,
     headerComponent: Header ? AgHeaderRenderer : undefined,
     headerComponentParams: Header ? { headerCell: Header } : undefined,
+    ...filterProps,
   }
 }
 

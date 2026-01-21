@@ -10,6 +10,14 @@ export type TableCellCtx<Row> = { row: Row; rowIndex: number }
 
 export type TableCellRenderer<Row> = FunctionalComponent<TableCellCtx<Row>>
 
+export type TableColumnFilterOption = { label: string; value: string }
+
+export type TableColumnFilter =
+  | { type: 'text'; placeholder?: string }
+  | { type: 'select'; options: TableColumnFilterOption[] }
+  | { type: 'date' }
+  | { type: 'custom'; key: string; label?: string; placeholder?: string }
+
 export type TableColumnDef<Row> = {
   key: string
   title: string
@@ -17,6 +25,7 @@ export type TableColumnDef<Row> = {
   align?: TableAlign
   fixed?: TableFixed
   sortable?: boolean
+  filter?: TableColumnFilter
   valueGetter?: (row: Row) => unknown
   cell?: TableCellRenderer<Row>
   headerCell?: FunctionalComponent

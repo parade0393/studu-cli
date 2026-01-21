@@ -1,4 +1,5 @@
-import { Table, Spin, Empty } from 'ant-design-vue'
+import { Button, DatePicker, Empty, Input, InputNumber, Space, Spin, Table } from 'ant-design-vue'
+import type { Dayjs } from 'dayjs'
 import type { ColumnType, ColumnGroupType } from 'ant-design-vue/es/table'
 import type { SorterResult } from 'ant-design-vue/es/table/interface'
 import { defineComponent, computed, type VNodeChild } from 'vue'
@@ -42,6 +43,16 @@ function renderCell(row: Row, rowIndex: number, col: TableColumnDef<Row>): VNode
   }
 }
 
+function toTimeValue(value: unknown): number | null {
+  if (!value) return null
+  if (value instanceof Date) {
+    const t = value.getTime()
+    return Number.isNaN(t) ? null : t
+  }
+  const t = new Date(String(value)).getTime()
+  return Number.isNaN(t) ? null : t
+}
+
 function buildColumns(
   columns: TableColumnDef<Row>[],
   sort: TableSortRule[] | undefined,
@@ -50,6 +61,152 @@ function buildColumns(
   const currentSort = toAntSort(sort)
   return columns.map((col) => {
     const Header = col.headerCell
+    const filter = col.filter
+    const filterProps: Partial<ColumnType<Row>> = {}
+
+    if (filter?.type === 'select') {
+      filterProps.filters = filter.options.map((option) => ({
+        text: option.label,
+        value: option.value,
+      }))
+      filterProps.filterMultiple = false
+      filterProps.onFilter = (value, record) =>
+        String((record as Record<string, unknown>)[col.key] ?? '') === String(value ?? '')
+    }
+
+    if (filter?.type === 'text') {
+      filterProps.filterDropdown = ({
+        selectedKeys,
+        setSelectedKeys,
+        confirm,
+        clearFilters,
+      }: {
+        selectedKeys: (string | number)[]
+        setSelectedKeys: (keys: (string | number)[]) => void
+        confirm: (opts?: { closeDropdown?: boolean }) => void
+        clearFilters?: () => void
+      }) => (
+        <div class="tb-ant-filter">
+          <Input
+            placeholder={filter.placeholder ?? '输入关键词'}
+            value={selectedKeys[0] as string | undefined}
+            onChange={(e) => {
+              const next = e.target.value
+              setSelectedKeys(next ? [next] : [])
+            }}
+            onPressEnter={() => confirm()}
+          />
+          <Space class="tb-ant-filter-actions" size={6}>
+            <Button type="primary" size="small" onClick={() => confirm()}>
+              筛选
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                clearFilters?.()
+                confirm({ closeDropdown: true })
+              }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      )
+      filterProps.onFilter = (value, record) =>
+        String((record as Record<string, unknown>)[col.key] ?? '')
+          .toLowerCase()
+          .includes(String(value ?? '').toLowerCase())
+    }
+
+    if (filter?.type === 'date') {
+      filterProps.filterDropdown = ({
+        selectedKeys,
+        setSelectedKeys,
+        confirm,
+        clearFilters,
+      }: {
+        selectedKeys: unknown[]
+        setSelectedKeys: (keys: unknown[]) => void
+        confirm: (opts?: { closeDropdown?: boolean }) => void
+        clearFilters?: () => void
+      }) => (
+        <div class="tb-ant-filter">
+          <DatePicker.RangePicker
+            value={Array.isArray(selectedKeys[0]) ? (selectedKeys[0] as [Dayjs, Dayjs]) : null}
+            onChange={(next) => setSelectedKeys(next ? [next] : [])}
+            onOpenChange={(open) => {
+              if (!open) confirm()
+            }}
+          />
+          <Space class="tb-ant-filter-actions" size={6}>
+            <Button type="primary" size="small" onClick={() => confirm()}>
+              筛选
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                clearFilters?.()
+                confirm({ closeDropdown: true })
+              }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      )
+      filterProps.onFilter = (value, record) => {
+        const range = Array.isArray(value) ? (value as Array<{ valueOf: () => number }>) : []
+        const start = range[0]?.valueOf?.()
+        const end = range[1]?.valueOf?.()
+        if (!start || !end) return true
+        const cell = toTimeValue((record as Record<string, unknown>)[col.key])
+        if (!cell) return false
+        return cell >= start && cell <= end
+      }
+    }
+
+    if (filter?.type === 'custom' && filter.key === 'riskMin') {
+      filterProps.filterDropdown = ({
+        selectedKeys,
+        setSelectedKeys,
+        confirm,
+        clearFilters,
+      }: {
+        selectedKeys: unknown[]
+        setSelectedKeys: (keys: unknown[]) => void
+        confirm: (opts?: { closeDropdown?: boolean }) => void
+        clearFilters?: () => void
+      }) => (
+        <div class="tb-ant-filter">
+          <InputNumber
+            min={1}
+            max={5}
+            value={typeof selectedKeys[0] === 'number' ? (selectedKeys[0] as number) : undefined}
+            placeholder={filter.placeholder ?? '最低风险等级'}
+            onChange={(next) => setSelectedKeys(next != null ? [next] : [])}
+          />
+          <Space class="tb-ant-filter-actions" size={6}>
+            <Button type="primary" size="small" onClick={() => confirm()}>
+              筛选
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                clearFilters?.()
+                confirm({ closeDropdown: true })
+              }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      )
+      filterProps.onFilter = (value, record) => {
+        const min = Number(value)
+        if (!Number.isFinite(min)) return true
+        return Number((record as Record<string, unknown>)[col.key]) >= min
+      }
+    }
     const column: ColumnType<Row> = {
       key: col.key,
       dataIndex: col.key,
@@ -68,6 +225,7 @@ function buildColumns(
             return { rowSpan: span.rowspan, colSpan: span.colspan }
           }
         : undefined,
+      ...filterProps,
     }
     return column
   })

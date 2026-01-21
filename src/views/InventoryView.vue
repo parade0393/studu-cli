@@ -152,28 +152,56 @@ const total = ref(0)
 const selectedRowKeys = ref<string[]>([])
 
 const modeHint = computed(() => {
+  const hints: string[] = []
+
   if (store.libraryMode === 'el-table' && store.toggles.rowVirtual) {
-    return 'Element Plus Table 未提供可接管表体渲染的入口，无法直接接入 @tanstack/virtual；虚拟化请切换到官方 Table V2。'
+    hints.push(
+      'Element Plus Table 未提供可接管表体渲染的入口，无法直接接入 @tanstack/virtual；虚拟化请切换到官方 Table V2。',
+    )
   }
   if (store.libraryMode === 'el-table-v2' && store.toggles.merge) {
-    return 'Element Plus Table V2 虽然支持合并，但是实现起来有很多坑，比如复杂的单元格合并，合并时的hover效果好像都不太好处理。'
+    hints.push(
+      'Element Plus Table V2 虽然支持合并，但是实现起来有很多坑，比如复杂的单元格合并，合并时的hover效果好像都不太好处理。',
+    )
   }
   if (store.libraryMode === 'ant-table' && store.toggles.rowVirtual) {
-    return 'Ant Design Vue Table 文档未提供可替换 body/row 的渲染入口，难以接入 @tanstack/virtual；需分页或自建虚拟表格壳。'
+    hints.push(
+      'Ant Design Vue Table 文档未提供可替换 body/row 的渲染入口，难以接入 @tanstack/virtual；需分页或自建虚拟表格壳。',
+    )
   }
   if (store.libraryMode === 'ant-table' && store.toggles.merge) {
-    return 'Ant Design Vue Table 已通过 customCell + rowSpan/colSpan 实现单元格合并。'
+    hints.push('Ant Design Vue Table 已通过 customCell + rowSpan/colSpan 实现单元格合并。')
   }
   if (store.libraryMode === 'tanstack-table' && store.toggles.rowVirtual) {
-    return 'TanStack Table 已接入 @tanstack/virtual，实现行虚拟滚动。'
+    hints.push('TanStack Table 已接入 @tanstack/virtual，实现行虚拟滚动。')
   }
   if (store.libraryMode === 'tanstack-table' && store.toggles.merge) {
-    return 'TanStack Table 已通过 spanMethod + rowSpan/colSpan 实现单元格合并。'
+    hints.push('TanStack Table 已通过 spanMethod + rowSpan/colSpan 实现单元格合并。')
   }
   if (store.libraryMode === 'ag-grid' && store.toggles.rowVirtual) {
-    return 'AG Grid Community 内置行虚拟化（窗口渲染），无需额外接入虚拟库。'
+    hints.push('AG Grid Community 内置行虚拟化（窗口渲染），无需额外接入虚拟库。')
   }
-  return null
+
+  if (store.libraryMode === 'el-table') {
+    hints.push('列筛选：仅内建列表过滤(filters)，输入/日期/自定义需自行实现。')
+  }
+  if (store.libraryMode === 'el-table-v2') {
+    hints.push('列筛选：无内建过滤面板，示例通过自定义表头实现输入/选择/日期/自定义。')
+  }
+  if (store.libraryMode === 'ant-table') {
+    hints.push('列筛选：内建 filters + filterDropdown，自定义面板示例已启用。')
+  }
+  if (store.libraryMode === 'vxe-table') {
+    hints.push('列筛选：内建 filters + filterRender，自定义筛选示例已启用。')
+  }
+  if (store.libraryMode === 'ag-grid') {
+    hints.push('列筛选：内建文本/集合/日期/数值过滤；自定义组件需另实现。')
+  }
+  if (store.libraryMode === 'tanstack-table') {
+    hints.push('列筛选：TanStack Table 方案暂未实现（后续补充）。')
+  }
+
+  return hints.length ? hints.join('；') : null
 })
 
 const tableHeight = computed(() => 'calc(100vh - 340px)')

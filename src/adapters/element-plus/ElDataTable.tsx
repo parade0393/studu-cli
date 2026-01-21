@@ -48,6 +48,20 @@ function renderCell<Row>(row: Row, rowIndex: number, col: TableColumnDef<Row>): 
 function renderColumns<Row>(columns: TableColumnDef<Row>[]) {
   return columns.map((col) => {
     const Header = col.headerCell
+    const filterProps =
+      col.filter?.type === 'select'
+        ? {
+            filters: col.filter.options.map((option) => ({
+              text: option.label,
+              value: option.value,
+            })),
+            filterMultiple: false,
+            filterMethod: (value: string, row: Row) => {
+              const raw = (row as Record<string, unknown>)[col.key]
+              return String(raw ?? '') === String(value ?? '')
+            },
+          }
+        : {}
     return (
       <ElTableColumn
         key={col.key}
@@ -58,6 +72,8 @@ function renderColumns<Row>(columns: TableColumnDef<Row>[]) {
         align={col.align}
         sortable={col.sortable ? 'custom' : false}
         showOverflowTooltip
+        columnKey={col.key}
+        {...filterProps}
         v-slots={{
           default: ({ row, $index }: { row: Row; $index: number }) => renderCell(row, $index, col),
           header: Header ? () => <Header /> : undefined,

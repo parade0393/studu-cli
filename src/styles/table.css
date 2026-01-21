@@ -297,6 +297,38 @@
   box-shadow: -1px 0 0 var(--tb-border-color);
 }
 
+.tb-skin .tb-v2-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-skin .tb-v2-header-title {
+  font-weight: 600;
+}
+
+.tb-skin .tb-v2-filter-trigger {
+  font-size: 12px;
+  color: var(--tb-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tb-skin .tb-v2-filter-trigger.is-active {
+  color: var(--el-color-primary);
+}
+
+.tb-v2-filter-panel {
+  display: grid;
+  gap: 8px;
+  min-width: 200px;
+}
+
+.tb-v2-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .tb-skin .tb-loading {
   position: absolute;
   inset: 0;
@@ -346,6 +378,17 @@
 
 .tb-skin.ag-theme-quartz .ag-header-cell-label {
   font-weight: 600;
+}
+
+.tb-ant-filter {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.tb-ant-filter-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ---------- VXE Table ---------- */

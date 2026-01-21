@@ -26,12 +26,30 @@ export function buildInventoryColumns(
 
   for (const s of specs) {
     const key = String(s.key)
+    const filter =
+      key === 'sku'
+        ? { type: 'text', placeholder: '搜索 SKU' }
+        : key === 'qualityStatus'
+          ? {
+              type: 'select',
+              options: [
+                { label: 'OK', value: 'OK' },
+                { label: 'HOLD', value: 'HOLD' },
+                { label: 'NG', value: 'NG' },
+              ],
+            }
+          : key === 'expireAt'
+            ? { type: 'date' }
+            : key === 'riskLevel'
+              ? { type: 'custom', key: 'riskMin', label: '风险等级' }
+              : undefined
     const base: TableColumnDef<InventoryRow> = {
       key,
       title: s.title,
       width: s.width,
       align: s.align,
       fixed: s.fixed,
+      filter,
       sortable:
         ['available', 'onHand', 'expireAt', 'riskLevel'].includes(key) || key.startsWith('ext'),
     }

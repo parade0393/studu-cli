@@ -1,7 +1,13 @@
 import {
   ElAutoResizer,
+  ElButton,
   ElCheckbox,
+  ElDatePicker,
   ElEmpty,
+  ElInput,
+  ElInputNumber,
+  ElPopover,
+  ElSelectV2,
   ElTableV2,
   TableV2FixedDir,
   TableV2SortOrder,
@@ -9,8 +15,10 @@ import {
 import type { SortBy, TableV2CustomizedHeaderSlotParam } from 'element-plus'
 import type { Column as V2Column } from 'element-plus/es/components/table-v2/src/types'
 import {
+  computed,
   defineComponent,
   isVNode,
+  reactive,
   resolveDirective,
   withDirectives,
   type VNode,
@@ -60,6 +68,67 @@ function wrapVNode(child: VNodeChild): VNode {
   if (child == null || child === false) return <span class="tb-cell-text" />
   if (Array.isArray(child)) return <span class="tb-cell-text">{child}</span>
   return <span class="tb-cell-text">{String(child)}</span>
+}
+
+function toTimeValue(value: unknown): number | null {
+  if (!value) return null
+  if (value instanceof Date) {
+    const t = value.getTime()
+    return Number.isNaN(t) ? null : t
+  }
+  const t = new Date(String(value)).getTime()
+  return Number.isNaN(t) ? null : t
+}
+
+function isFilterActive(filter: TableColumnDef<Row>['filter'], value: unknown) {
+  if (!filter) return false
+  if (filter.type === 'text') return String(value ?? '').trim().length > 0
+  if (filter.type === 'select') return value != null && value !== ''
+  if (filter.type === 'date') {
+    return Array.isArray(value) && value.length === 2 && value[0] && value[1]
+  }
+  if (filter.type === 'custom') return value != null && value !== ''
+  return false
+}
+
+function matchesFilter(row: Row, col: TableColumnDef<Row>, value: unknown) {
+  const filter = col.filter
+  if (!filter || !isFilterActive(filter, value)) return true
+  const raw = (row as Record<string, unknown>)[col.key]
+  if (filter.type === 'text') {
+    const keyword = String(value ?? '')
+      .trim()
+      .toLowerCase()
+    if (!keyword) return true
+    return String(raw ?? '')
+      .toLowerCase()
+      .includes(keyword)
+  }
+  if (filter.type === 'select') {
+    return String(raw ?? '') === String(value ?? '')
+  }
+  if (filter.type === 'date') {
+    const range = Array.isArray(value) ? value : []
+    const start = toTimeValue(range[0])
+    const end = toTimeValue(range[1])
+    const cell = toTimeValue(raw)
+    if (start == null || end == null || cell == null) return true
+    return cell >= start && cell <= end
+  }
+  if (filter.type === 'custom' && filter.key === 'riskMin') {
+    const min = Number(value)
+    if (!Number.isFinite(min)) return true
+    return Number(raw) >= min
+  }
+  return true
+}
+
+function applyFilters(rows: Row[], columns: TableColumnDef<Row>[], state: Record<string, unknown>) {
+  const active = columns
+    .map((col) => ({ col, value: state[col.key] }))
+    .filter(({ col, value }) => isFilterActive(col.filter, value))
+  if (!active.length) return rows
+  return rows.filter((row) => active.every(({ col, value }) => matchesFilter(row, col, value)))
 }
 
 function buildHeaderRenderer(groups: TableHeaderGroup<Row>[]) {
@@ -172,8 +241,108 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
     emptyText: { type: String, required: false },
   },
   setup(props) {
+    const filterState = reactive<Record<string, unknown>>({})
+    const filteredData = computed(() =>
+      applyFilters(props.rows as Row[], props.columns as TableColumnDef<Row>[], filterState),
+    )
+
+    const renderFilterHeader = (col: TableColumnDef<Row>) => {
+      const filter = col.filter
+      if (!filter) return <span class="tb-v2-header-title">{col.title}</span>
+      const value = filterState[col.key]
+      const isActive = isFilterActive(filter, value)
+      const setValue = (next: unknown) => {
+        filterState[col.key] = next
+      }
+      const resetValue = () => {
+        if (filter.type === 'date') {
+          filterState[col.key] = []
+          return
+        }
+        if (filter.type === 'custom') {
+          filterState[col.key] = null
+          return
+        }
+        filterState[col.key] = ''
+      }
+
+      const renderControl = () => {
+        if (filter.type === 'text') {
+          return (
+            <ElInput
+              modelValue={String(value ?? '')}
+              placeholder={filter.placeholder ?? '输入关键词'}
+              clearable
+              onUpdate:modelValue={(next) => setValue(next)}
+            />
+          )
+        }
+        if (filter.type === 'select') {
+          return (
+            <ElSelectV2
+              modelValue={value ?? ''}
+              placeholder={filter.placeholder ?? '选择状态'}
+              clearable
+              teleported={false}
+              options={filter.options}
+              onUpdate:modelValue={(next) => setValue(next)}
+            />
+          )
+        }
+        if (filter.type === 'date') {
+          return (
+            <ElDatePicker
+              modelValue={Array.isArray(value) ? value : []}
+              type="daterange"
+              rangeSeparator="~"
+              startPlaceholder="开始"
+              endPlaceholder="结束"
+              teleported={false}
+              onUpdate:modelValue={(next) => setValue(next)}
+            />
+          )
+        }
+        if (filter.type === 'custom' && filter.key === 'riskMin') {
+          return (
+            <ElInputNumber
+              modelValue={typeof value === 'number' ? value : undefined}
+              min={1}
+              max={5}
+              controlsPosition="right"
+              placeholder={filter.placeholder ?? '最低风险等级'}
+              onUpdate:modelValue={(next) => setValue(next)}
+            />
+          )
+        }
+        return null
+      }
+
+      return (
+        <div class="tb-v2-header">
+          <span class="tb-v2-header-title">{col.title}</span>
+          <ElPopover trigger="click" width={260}>
+            {{
+              reference: () => (
+                <span class={['tb-v2-filter-trigger', isActive ? 'is-active' : null]}>Filter</span>
+              ),
+              default: () => (
+                <div class="tb-v2-filter-panel">
+                  {renderControl()}
+                  <div class="tb-v2-filter-actions">
+                    <ElButton size="small" text onClick={resetValue}>
+                      清除
+                    </ElButton>
+                  </div>
+                </div>
+              ),
+            }}
+          </ElPopover>
+        </div>
+      )
+    }
+
     return () => {
-      const data = props.rows as Row[]
+      const data = filteredData.value as Row[]
       const rowKey = (r: Row) => getRowKey(props.rowKey, r)
       const selected = new Set(props.selectedRowKeys ?? [])
 
@@ -241,6 +410,7 @@ export const ElDataTableV2 = defineComponent<DataTableProps<Row>>({
               : TableV2FixedDir.RIGHT
             : undefined,
           sortable: d.sortable,
+          headerCellRenderer: d.filter ? () => renderFilterHeader(d) : undefined,
           cellRenderer: ({ rowData, rowIndex }) =>
             wrapVNode(renderCell(rowData, typeof rowIndex === 'number' ? rowIndex : 0, d)),
         })

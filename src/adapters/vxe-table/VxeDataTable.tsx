@@ -1,5 +1,10 @@
-import { VxeColgroup, VxeColumn, VxeTable } from 'vxe-table'
-import type { VxeTableInstance, VxeTableDefines, VxeTablePropTypes } from 'vxe-table'
+import { VxeGrid } from 'vxe-table'
+import type {
+  VxeGridInstance,
+  VxeGridPropTypes,
+  VxeTableDefines,
+  VxeTablePropTypes,
+} from 'vxe-table'
 import { computed, defineComponent, ref, watch } from 'vue'
 import type {
   DataTableProps,
@@ -8,6 +13,7 @@ import type {
   TableSortRule,
 } from '../table/types'
 import { defaultCellText, getRowKey } from '../table/utils'
+import { useBenchmarkStore } from '../../stores/benchmark'
 
 type Row = Record<string, unknown>
 
@@ -25,35 +31,126 @@ function renderCell<RowType>(row: RowType, rowIndex: number, col: TableColumnDef
   }
 }
 
-function renderColumn<RowType>(col: TableColumnDef<RowType>) {
-  const Header = col.headerCell
-  const useFixedWidth = Boolean(col.fixed)
-  return (
-    <VxeColumn
-      key={col.key}
-      field={col.key}
-      title={col.title}
-      width={useFixedWidth ? col.width : undefined}
-      minWidth={!useFixedWidth ? col.width : undefined}
-      fixed={col.fixed}
-      align={col.align}
-      sortable={col.sortable}
-      showOverflow
-      v-slots={{
-        default: ({ row, rowIndex }: { row: RowType; rowIndex: number }) =>
-          renderCell(row, rowIndex, col),
-        header: Header ? () => <Header /> : undefined,
-      }}
-    />
-  )
+type RenderColumnOptions = {
+  disableFixed?: boolean
+  forceWidth?: boolean
 }
 
-function renderGroupedColumns<RowType>(groups: TableHeaderGroup<RowType>[]) {
-  return groups.map((g) => (
-    <VxeColgroup key={g.title} title={g.title}>
-      {g.columns.map((col) => renderColumn(col))}
-    </VxeColgroup>
-  ))
+type GridColumn<RowType> = VxeGridPropTypes.Column<RowType>
+
+function renderColumn<RowType>(
+  col: TableColumnDef<RowType>,
+  options: RenderColumnOptions = {},
+): GridColumn<RowType> {
+  const Header = col.headerCell
+  const fixed = options.disableFixed ? undefined : col.fixed
+  const useFixedWidth = options.forceWidth ?? Boolean(fixed)
+  const filter = col.filter
+  const filterProps =
+    filter?.type === 'select'
+      ? {
+          filters: filter.options.map((option) => ({
+            label: option.label,
+            value: option.value,
+          })),
+          filterMultiple: false,
+        }
+      : filter?.type === 'text'
+        ? {
+            filters: [{ data: '' }],
+            filterRender: {
+              name: 'VxeInput',
+              props: { clearable: true, placeholder: filter.placeholder ?? '输入关键词' },
+            },
+            filterMethod: ({ option, row }: { option: { data?: unknown }; row: RowType }) => {
+              const keyword = String(option.data ?? '')
+                .trim()
+                .toLowerCase()
+              if (!keyword) return true
+              const raw = (row as Record<string, unknown>)[col.key]
+              return String(raw ?? '')
+                .toLowerCase()
+                .includes(keyword)
+            },
+          }
+        : filter?.type === 'date'
+          ? {
+              filters: [{ data: [] }],
+              filterRender: {
+                name: 'VxeDatePicker',
+                props: { type: 'daterange', transfer: true },
+              },
+              filterMethod: ({ option, row }: { option: { data?: unknown }; row: RowType }) => {
+                const range = Array.isArray(option.data) ? option.data : []
+                const start = range[0] ? new Date(String(range[0])).getTime() : null
+                const end = range[1] ? new Date(String(range[1])).getTime() : null
+                if (!start || !end) return true
+                const raw = (row as Record<string, unknown>)[col.key]
+                const cell = raw ? new Date(String(raw)).getTime() : NaN
+                if (Number.isNaN(cell)) return false
+                return cell >= start && cell <= end
+              },
+            }
+          : filter?.type === 'custom' && filter.key === 'riskMin'
+            ? {
+                filters: [{ data: null }],
+                filterRender: {
+                  name: 'VxeNumberInput',
+                  props: { min: 1, max: 5, controls: true },
+                },
+                filterMethod: ({ option, row }: { option: { data?: unknown }; row: RowType }) => {
+                  const min = Number(option.data)
+                  if (!Number.isFinite(min)) return true
+                  const raw = (row as Record<string, unknown>)[col.key]
+                  return Number(raw) >= min
+                },
+              }
+            : {}
+  const slots = {
+    default: ({ row, rowIndex }: { row: RowType; rowIndex: number }) =>
+      renderCell(row, rowIndex, col),
+    header: Header ? () => <Header /> : undefined,
+  }
+
+  return {
+    field: col.key,
+    title: col.title,
+    width: useFixedWidth ? col.width : undefined,
+    minWidth: !useFixedWidth ? col.width : undefined,
+    fixed,
+    align: col.align,
+    sortable: col.sortable,
+    showOverflow: true,
+    slots,
+    ...filterProps,
+  }
+}
+
+function resolveGroupFixed<RowType>(group: TableHeaderGroup<RowType>) {
+  const fixedValues = new Set(group.columns.map((col) => col.fixed).filter(Boolean))
+  return fixedValues.size === 1
+    ? (fixedValues.values().next().value as 'left' | 'right')
+    : undefined
+}
+
+function renderGroupedColumns<RowType>(
+  groups: TableHeaderGroup<RowType>[],
+  allowFixed: boolean,
+): GridColumn<RowType>[] {
+  return groups.map((g) => {
+    const groupFixed = allowFixed ? resolveGroupFixed(g) : undefined
+    const hasAnyFixed = allowFixed && g.columns.some((col) => Boolean(col.fixed))
+    return {
+      title: g.title,
+      fixed: groupFixed,
+      children: g.columns.map((col) =>
+        renderColumn(col, {
+          disableFixed: !allowFixed || Boolean(groupFixed || hasAnyFixed),
+          forceWidth: Boolean(groupFixed || (allowFixed && col.fixed)),
+        }),
+      ),
+    }
+  })
 }
 
 export const VxeDataTable = defineComponent<DataTableProps<Row>>({
@@ -75,8 +172,9 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
     emptyText: { type: String, required: false },
   },
   setup(props) {
-    const tableRef = ref<VxeTableInstance<Row> | null>(null)
+    const tableRef = ref<VxeGridInstance<Row> | null>(null)
     const syncingSelection = ref(false)
+    const store = useBenchmarkStore()
 
     const heightStyle = computed(() =>
       typeof props.height === 'number' ? `${props.height}px` : String(props.height),
@@ -177,17 +275,44 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
       const groups = props.headerGroups as TableHeaderGroup<Row>[] | undefined
       const groupedKeys = new Set(groups?.flatMap((g) => g.columns.map((c) => c.key)) ?? [])
       const leafColumns = defs.filter((col) => !groupedKeys.has(col.key))
+      const hasGroupedHeader = Boolean(groups?.length)
+      const hasFixedColumns = defs.some((col) => Boolean(col.fixed))
+      const allowFixed = store.toggles.fixedCols
+      const enableVirtualY = store.toggles.rowVirtual
+      const enableVirtualX =
+        store.toggles.colVirtual && !(allowFixed && hasGroupedHeader && hasFixedColumns)
+      const gridColumns: GridColumn<Row>[] = []
+
+      gridColumns.push({
+        type: 'seq',
+        width: 50,
+        fixed: allowFixed ? 'left' : undefined,
+      })
+      if (selectionEnabled.value) {
+        gridColumns.push({
+          type: 'checkbox',
+          width: 50,
+          fixed: allowFixed ? 'left' : undefined,
+        })
+      }
+      if (groups?.length) {
+        gridColumns.push(...renderGroupedColumns(groups, allowFixed))
+      }
+      gridColumns.push(
+        ...leafColumns.map((col) => renderColumn(col, { disableFixed: !allowFixed })),
+      )
 
       return (
         <div class="tb-skin" style={{ height: heightStyle.value }}>
-          <VxeTable
+          <VxeGrid
             ref={tableRef}
             data={props.rows as Row[]}
+            columns={gridColumns}
             height={tableHeight.value}
             border={props.border ? 'full' : false}
             loading={props.loading}
-            virtualYConfig={{ enabled: true, gt: 50 }}
-            virtualXConfig={{ enabled: true, gt: 20 }}
+            virtualYConfig={enableVirtualY ? { enabled: true, gt: 50 } : { enabled: false }}
+            virtualXConfig={enableVirtualX ? { enabled: true, gt: 20 } : { enabled: false }}
             rowConfig={rowConfig.value}
             columnConfig={{ resizable: false }}
             showOverflow
@@ -199,12 +324,7 @@ export const VxeDataTable = defineComponent<DataTableProps<Row>>({
             onCheckboxChange={emitSelection}
             onCheckboxAll={emitSelection}
             stripe={true}
-          >
-            <VxeColumn type="seq" width={50} fixed="left" />
-            {selectionEnabled.value ? <VxeColumn type="checkbox" width={50} fixed="left" /> : null}
-            {groups?.length ? renderGroupedColumns(groups) : null}
-            {leafColumns.map((col) => renderColumn(col))}
-          </VxeTable>
+          />
         </div>
       )
     }
