@@ -15,7 +15,16 @@
     <el-card shadow="never">
       <div class="grid">
         <div class="panel">
-          <div class="panel-title">可拣库存（左表）</div>
+          <div class="panel-head">
+            <div class="panel-title">可拣库存（左表）</div>
+            <ColumnSettings
+              :columns="baseLeftColumns"
+              v-model:order="leftColumnOrder"
+              v-model:visibility="leftColumnVisibility"
+              :support-text="columnSupport"
+              label="左表列设置"
+            />
+          </div>
           <el-alert
             v-if="leftHint"
             class="hint"
@@ -77,7 +86,16 @@
         </div>
 
         <div class="panel">
-          <div class="panel-title">拣货明细（右表：强编辑）</div>
+          <div class="panel-head">
+            <div class="panel-title">拣货明细（右表：强编辑）</div>
+            <ColumnSettings
+              :columns="baseRightColumns"
+              v-model:order="rightColumnOrder"
+              v-model:visibility="rightColumnVisibility"
+              :support-text="columnSupport"
+              label="右表列设置"
+            />
+          </div>
           <el-alert
             v-if="rightHint"
             class="hint"
@@ -175,6 +193,8 @@ import type { InventoryRow, PickLine, Picker, Query } from '../types/benchmark'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { useTableAdapter } from '../adapters/table/useTableAdapter'
 import type { TableCellCtx, TableColumnDef } from '../adapters/table/types'
+import ColumnSettings from '../components/ColumnSettings.vue'
+import { getColumnSupportText, useColumnSettings } from '../utils/columnSettings'
 
 const store = useBenchmarkStore()
 const adapter = useTableAdapter()
@@ -222,6 +242,7 @@ const leftHint = computed(() => null)
 const rightHint = computed(() =>
   store.libraryMode === 'el-table-v2' ? 'Table V2：重点观察编辑控件在虚拟滚动下的稳定性。' : null,
 )
+const columnSupport = computed(() => getColumnSupportText(store.libraryMode))
 
 function makeQuery(): Query {
   return { page: 1, pageSize: 200, sort: [{ field: 'expireAt', order: 'asc' }], filters: [] }
@@ -476,7 +497,7 @@ function applyBatchStrategy() {
   batchStrategyVisible.value = false
 }
 
-const leftColumns = computed<TableColumnDef<InventoryRow>[]>(() => [
+const baseLeftColumns = computed<TableColumnDef<InventoryRow>[]>(() => [
   { key: 'sku', title: 'SKU', width: 140, fixed: store.toggles.fixedCols ? 'left' : undefined },
   {
     key: 'skuName',
@@ -497,7 +518,14 @@ const leftColumns = computed<TableColumnDef<InventoryRow>[]>(() => [
   { key: 'expireAt', title: '效期', width: 170, valueGetter: (r) => formatDateTime(r.expireAt) },
 ])
 
-const rightColumns = computed<TableColumnDef<PickLine>[]>(() => {
+const leftColumnSettings = useColumnSettings(baseLeftColumns)
+const leftColumnOrder = leftColumnSettings.order
+const leftColumnVisibility = leftColumnSettings.visibility
+const leftColumns = computed<TableColumnDef<InventoryRow>[]>(
+  () => leftColumnSettings.visibleColumns.value,
+)
+
+const baseRightColumns = computed<TableColumnDef<PickLine>[]>(() => {
   const link = (text: string, onClick: () => void) => h('a', { class: 'link', onClick }, text)
 
   const pickQtyCell: FunctionalComponent<TableCellCtx<PickLine>> = ({ row }) =>
@@ -602,6 +630,13 @@ const rightColumns = computed<TableColumnDef<PickLine>[]>(() => {
   ]
 })
 
+const rightColumnSettings = useColumnSettings(baseRightColumns)
+const rightColumnOrder = rightColumnSettings.order
+const rightColumnVisibility = rightColumnSettings.visibility
+const rightColumns = computed<TableColumnDef<PickLine>[]>(
+  () => rightColumnSettings.visibleColumns.value,
+)
+
 loadLeft()
 </script>
 
@@ -626,9 +661,16 @@ loadLeft()
   background: var(--el-bg-color);
 }
 
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .panel-title {
   font-weight: 700;
-  margin-bottom: 8px;
 }
 
 .actions {

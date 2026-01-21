@@ -70,6 +70,14 @@
     </el-card>
 
     <el-card class="table-card" shadow="never">
+      <div class="table-tools">
+        <ColumnSettings
+          :columns="baseColumns"
+          v-model:order="columnOrder"
+          v-model:visibility="columnVisibility"
+          :support-text="columnSupport"
+        />
+      </div>
       <div class="table-wrap">
         <component
           :is="adapter.DataTable"
@@ -122,6 +130,12 @@ import { useBenchmarkStore } from '../stores/benchmark'
 import { useTableAdapter } from '../adapters/table/useTableAdapter'
 import { buildInventoryColumns } from '../columns/inventoryColumns'
 import type { TableColumnDef, TableHeaderGroup, TableSortRule } from '../adapters/table/types'
+import ColumnSettings from '../components/ColumnSettings.vue'
+import {
+  applyColumnSettingsToGroups,
+  getColumnSupportText,
+  useColumnSettings,
+} from '../utils/columnSettings'
 
 const store = useBenchmarkStore()
 const adapter = useTableAdapter()
@@ -205,6 +219,7 @@ const modeHint = computed(() => {
 })
 
 const tableHeight = computed(() => 'calc(100vh - 340px)')
+const columnSupport = computed(() => getColumnSupportText(store.libraryMode))
 
 function buildFilters(): FilterRule[] {
   const filters: FilterRule[] = []
@@ -279,20 +294,25 @@ const specs = computed(() => {
   return cols
 })
 
-const columns = computed<TableColumnDef<InventoryRow>[]>(() => {
-  return buildInventoryColumns(specs.value)
-})
+const baseColumns = computed<TableColumnDef<InventoryRow>[]>(() =>
+  buildInventoryColumns(specs.value),
+)
+const columnSettings = useColumnSettings(baseColumns)
+const columnOrder = columnSettings.order
+const columnVisibility = columnSettings.visibility
+
+const columns = computed<TableColumnDef<InventoryRow>[]>(() => columnSettings.visibleColumns.value)
 
 const headerGroups = computed<TableHeaderGroup<InventoryRow>[] | undefined>(() => {
   if (!store.toggles.groupedHeader) return undefined
   const group = (title: string, keys: string[]) => ({
     title,
-    columns: columns.value.filter((c) => keys.includes(c.key)),
+    columns: baseColumns.value.filter((c) => keys.includes(c.key)),
   })
-  const ext = columns.value.filter((c) => c.key.startsWith('ext'))
-  const ops = columns.value.filter((c) => c.key.startsWith('op'))
+  const ext = baseColumns.value.filter((c) => c.key.startsWith('ext'))
+  const ops = baseColumns.value.filter((c) => c.key.startsWith('op'))
 
-  return [
+  const groups = [
     group('货品信息', ['sku', 'skuName', 'batch', 'owner', 'supplier']),
     group('库位信息', ['warehouse', 'zone', 'bin']),
     group('数量信息', ['onHand', 'available', 'reserved', 'damaged', 'frozen']),
@@ -302,6 +322,8 @@ const headerGroups = computed<TableHeaderGroup<InventoryRow>[] | undefined>(() =
     { title: '扩展', columns: ext },
     { title: '操作', columns: ops },
   ].filter((g) => g.columns.length)
+
+  return applyColumnSettingsToGroups(groups, columnOrder.value, columnVisibility.value)
 })
 
 function onUpdateSelectedKeys(keys: string[]) {
@@ -366,6 +388,12 @@ runQuery()
 
 .table-card {
   overflow: hidden;
+}
+
+.table-tools {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .table-wrap {

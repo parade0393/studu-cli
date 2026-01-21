@@ -106,10 +106,12 @@ function renderColumn<RowType>(
                 },
               }
             : {}
-  const slots = {
+  const slots: GridColumn<RowType>['slots'] = {
     default: ({ row, rowIndex }: { row: RowType; rowIndex: number }) =>
       renderCell(row, rowIndex, col),
-    header: Header ? () => <Header /> : undefined,
+  }
+  if (Header) {
+    slots.header = () => <Header />
   }
 
   return {

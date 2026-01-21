@@ -10,6 +10,13 @@
           <el-checkbox v-model="onlyAvailable" size="small">只看有库存</el-checkbox>
         </div>
         <div class="right">
+          <ColumnSettings
+            :columns="baseColumns"
+            v-model:order="columnOrder"
+            v-model:visibility="columnVisibility"
+            :support-text="columnSupport"
+            label="列设置"
+          />
           <el-text type="info">
             lazy load
             <template v-if="store.dataMode === 'server'"> + failure injection（2%）</template>
@@ -76,6 +83,8 @@ import type { TreeNode } from '../types/benchmark'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { useTableAdapter } from '../adapters/table/useTableAdapter'
 import type { TableColumnDef, TreeLoadChildren } from '../adapters/table/types'
+import ColumnSettings from '../components/ColumnSettings.vue'
+import { getColumnSupportText, useColumnSettings } from '../utils/columnSettings'
 
 const store = useBenchmarkStore()
 const adapter = useTableAdapter()
@@ -86,6 +95,7 @@ const selected = ref<TreeNode | null>(null)
 const onlyAvailable = ref(false)
 
 const tableHeight = computed(() => 'calc(100vh - 280px)')
+const columnSupport = computed(() => getColumnSupportText(store.libraryMode))
 
 type TreeHandle = { expandTo?: (level: number) => Promise<void>; collapseAll?: () => void }
 const treeRef = ref<(ComponentPublicInstance & TreeHandle) | null>(null)
@@ -128,7 +138,7 @@ function locate(row: TreeNode) {
   ElMessage.info(`定位到 /inventory（示意）：${row.name}`)
 }
 
-const columns = computed<TableColumnDef<TreeNode>[]>(() => {
+const baseColumns = computed<TableColumnDef<TreeNode>[]>(() => {
   const link = (text: string, onClick: () => void) => h('a', { class: 'link', onClick }, text)
   return [
     {
@@ -162,6 +172,11 @@ const columns = computed<TableColumnDef<TreeNode>[]>(() => {
     },
   ]
 })
+
+const columnSettings = useColumnSettings(baseColumns)
+const columnOrder = columnSettings.order
+const columnVisibility = columnSettings.visibility
+const columns = computed<TableColumnDef<TreeNode>[]>(() => columnSettings.visibleColumns.value)
 
 async function expandTo(level: number) {
   if (store.libraryMode === 'el-table') {
@@ -208,6 +223,9 @@ reload()
 
 .right {
   overflow: hidden;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .title {

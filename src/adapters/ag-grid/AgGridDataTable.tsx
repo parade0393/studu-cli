@@ -95,9 +95,11 @@ function buildColDef(
   }
 
   if (filter?.type === 'select') {
-    filterProps.filter = 'agSetColumnFilter'
+    filterProps.filter = 'agTextColumnFilter'
     filterProps.filterParams = {
-      values: filter.options.map((option) => option.value),
+      filterOptions: ['equals'],
+      defaultOption: 'equals',
+      trimInput: true,
     }
     filterProps.floatingFilter = true
   }
@@ -323,6 +325,7 @@ export const AgGridDataTable = defineComponent<DataTableProps<Row>>({
       const selectionEnabled = !!props.selection && !!props.onUpdateSelectedRowKeys
 
       const gridOptions = {
+        theme: 'legacy',
         onGridReady,
         onSelectionChanged,
         onSortChanged,

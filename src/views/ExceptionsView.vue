@@ -36,6 +36,14 @@
         show-icon
         :closable="false"
       />
+      <div class="table-tools">
+        <ColumnSettings
+          :columns="baseColumns"
+          v-model:order="columnOrder"
+          v-model:visibility="columnVisibility"
+          :support-text="columnSupport"
+        />
+      </div>
 
       <div class="table-wrap">
         <component
@@ -122,6 +130,8 @@ import type {
   TableFixed,
   TableSortRule,
 } from '../adapters/table/types'
+import ColumnSettings from '../components/ColumnSettings.vue'
+import { getColumnSupportText, useColumnSettings } from '../utils/columnSettings'
 
 const store = useBenchmarkStore()
 const adapter = useTableAdapter()
@@ -144,6 +154,7 @@ const timelineLoading = ref(false)
 const timeline = ref<{ at: string; text: string }[]>([])
 
 const tableHeight = computed(() => 'calc(100vh - 300px)')
+const columnSupport = computed(() => getColumnSupportText(store.libraryMode))
 
 const modeHint = computed(() => {
   if (store.libraryMode === 'el-table-v2')
@@ -222,7 +233,7 @@ function fixedIf(enabled: boolean, dir: TableFixed): TableFixed | undefined {
   return enabled ? dir : undefined
 }
 
-const columns = computed<TableColumnDef<ExceptionRow>[]>(() => {
+const baseColumns = computed<TableColumnDef<ExceptionRow>[]>(() => {
   const link = (text: string, onClick: () => void) => h('a', { class: 'link', onClick }, text)
   const fixedLeft = store.toggles.fixedCols ? 'left' : undefined
   const fixedRight = store.toggles.fixedCols ? 'right' : undefined
@@ -291,6 +302,11 @@ const columns = computed<TableColumnDef<ExceptionRow>[]>(() => {
   ]
 })
 
+const columnSettings = useColumnSettings(baseColumns)
+const columnOrder = columnSettings.order
+const columnVisibility = columnSettings.visibility
+const columns = computed<TableColumnDef<ExceptionRow>[]>(() => columnSettings.visibleColumns.value)
+
 async function act(action: 'process' | 'assign' | 'create-adjustment', row: ExceptionRow) {
   const res = await exceptionAction({ seed: store.seed, action, id: row.id })
   if (res.ok) ElMessage.success('操作成功')
@@ -336,6 +352,12 @@ runQuery()
 
 .hint {
   margin-bottom: 10px;
+}
+
+.table-tools {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .link {
